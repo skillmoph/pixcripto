@@ -12,8 +12,8 @@
   /* ===== PixCripto look (Stageshow: uma família neutra, cinco tintas, um acento) ===== */
   :root{
     --canvas:#0c0e0d; --surface:#141817; --well:#0f1312; --raised:#1a1f1d;
-    --line:rgba(235,240,238,.11); --line-soft:rgba(235,240,238,.06);
-    --ink:#eef2f0; --ink-2:#a7b1ad; --ink-3:#6e7874; --ink-4:#49524e;
+    --line:rgba(235,240,238,.22); --line-soft:rgba(235,240,238,.11);
+    --ink:#f4f7f5; --ink-2:#c3ccc8; --ink-3:#96a19c; --ink-4:#77827d;
     --accent:#2fbf9f; --accent-ink:#4dd8b4; --accent-soft:rgba(47,191,159,.14);
     --danger:#f97066; --warn:#e8a33d;
     --mono:ui-monospace,"SF Mono",Menlo,monospace;
@@ -41,7 +41,7 @@
     display:flex;align-items:baseline;gap:6px;background:var(--surface);border:1px solid var(--line-soft);
     border-radius:999px;padding:7px 13px;font-size:12px;color:var(--ink-3);
   }
-  .rate b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .rate b{color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums}
   .rate .live{width:6px;height:6px;border-radius:50%;background:var(--accent);align-self:center;animation:blink 2.4s infinite}
   @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
 
@@ -64,15 +64,15 @@
   .pane.on{display:block}
 
   /* ===== labels e campos ===== */
-  label.lab{display:block;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin:0 0 7px 1px}
+  label.lab{display:block;font-size:11.5px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin:0 0 7px 1px}
   .fld{margin-bottom:16px}
-  .hint{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.5}
+  .hint{font-size:12.5px;color:var(--ink-3);margin-top:6px;line-height:1.5}
   input.txt,select.sel{
     width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
     color:var(--ink);font:500 14.5px "Figtree",system-ui;padding:12px 14px;outline:0;
     transition:border-color var(--t), box-shadow var(--t);
   }
-  input.txt::placeholder{color:var(--ink-4)}
+  input.txt::placeholder{color:#8b9691}
   input.txt:focus,select.sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
   .inrow{display:flex;gap:8px}
   .inrow .txt{flex:1}
@@ -88,8 +88,8 @@
     width:100%;background:transparent;border:0;outline:0;color:var(--ink);
     font:700 34px/1.15 "Figtree",system-ui;letter-spacing:-.02em;font-variant-numeric:tabular-nums;padding:0;
   }
-  .conv input.big::placeholder{color:var(--ink-4)}
-  .conv .sub{font-size:12px;color:var(--ink-3);margin-top:2px}
+  .conv input.big::placeholder{color:#8b9691}
+  .conv .sub{font-size:12.5px;color:var(--ink-3);margin-top:2px}
   .conv .cur{font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--ink-2);background:var(--surface);border:1px solid var(--line-soft);border-radius:7px;padding:4px 9px}
   .divider{display:flex;align-items:center;gap:10px;margin:4px 0}
   .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line-soft)}
@@ -108,7 +108,7 @@
   }
   .net svg{width:16px;height:16px}
   .net.sel{border-color:var(--ink);color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
-  .limits{font-size:11.5px;color:var(--ink-4);margin:-8px 1px 14px}
+  .limits{font-size:12px;color:var(--ink-4);margin:-8px 1px 14px}
 
   /* ===== PIX / Boleto ===== */
   .paywith{display:flex;gap:2px;background:var(--well);border-radius:10px;padding:3px;margin-bottom:16px}
@@ -126,7 +126,7 @@
   }
   .cta:hover{opacity:.92}
   .cta:active{transform:translateY(1px)}
-  .cta:disabled{background:var(--well);color:var(--ink-4);cursor:not-allowed;transform:none}
+  .cta:disabled{background:rgba(235,240,238,.12);color:#9aa5a0;cursor:not-allowed;transform:none}
   .cta.accent{background:var(--accent);color:#06251e}
   .cta.accent:hover{opacity:.92}
   .btn2{
@@ -182,7 +182,7 @@
   .ghost{background:transparent;border:0;color:var(--ink-3);font:600 12.5px "Figtree";cursor:pointer;margin-top:12px;padding:4px 2px}
   .ghost:hover{color:var(--ink)}
 
-  footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--ink-4);line-height:1.8}
+  footer{margin-top:22px;text-align:center;font-size:12px;color:var(--ink-4);line-height:1.8}
   footer a{color:var(--ink-3);text-decoration:none;border-bottom:1px solid var(--line)}
   footer a:hover{color:var(--ink)}
   .demo-note{font-size:10.5px;color:var(--ink-4);margin-top:6px}
