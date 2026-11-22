@@ -395,7 +395,7 @@
 
 <div class="toast" id="toast"></div>
 
-<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
 <script>
 /* ================= PixCripto — front ================= */
 const $ = s => document.querySelector(s);
@@ -547,8 +547,9 @@ function showOrder(o){
   $('#os-dest').textContent = o.mode==='pix' ? o.pixKey : 'Boleto '+o.boleto.slice(0,18)+'…';
   $('#os-code').textContent = o.code;
   const c=$('#os-qr');
-  if(window.QRCode){ QRCode.toCanvas(c, o.depositAddress, {width:164, margin:0}, ()=>{}); }
-  else { c.style.display='none'; }
+  const drawQR=(tries)=>{ if(window.QRCode){ QRCode.toCanvas(c, o.depositAddress, {width:164, margin:0}, ()=>{}); }
+    else if(tries>0){ setTimeout(()=>drawQR(tries-1),400); } else { c.style.display='none'; } };
+  drawQR(10);
   setStatus('WAITING_DEPOSIT');
   clearInterval(poller);
   poller=setInterval(()=>pollStatus(o.code),5000);
