@@ -293,7 +293,7 @@
     <div class="conv">
       <div class="row2"><label class="lab" style="margin:0">Você recebe</label><span class="cur">BRL</span></div>
       <input class="big" id="web3-brl" type="text" inputmode="decimal" placeholder="0,00">
-      <div class="sub" id="web3-usdt-est">≈ 0,00 USDT da sua carteira</div>
+      <div class="sub" id="web3-usdt-est">≈ 0,00 USDT para depositar</div>
     </div>
 
     <div class="paywith" id="paywith-web3" style="margin-top:16px">
@@ -631,7 +631,7 @@ $('#receipt-check').addEventListener('click', async ()=>{
 /* ---------- web3 tab ---------- */
 $('#web3-brl').addEventListener('input',()=>{
   const r=effRate(); const b=num($('#web3-brl').value);
-  $('#web3-usdt-est').textContent = r&&b ? '≈ '+fmt(b/r)+' USDT da sua carteira' : '≈ 0,00 USDT da sua carteira';
+  $('#web3-usdt-est').textContent = r&&b ? '≈ '+fmt(b/r)+' USDT para depositar' : '≈ 0,00 USDT para depositar';
 });
 $('#go-web3').addEventListener('click',()=>{
   placeOrderFromFields($('#go-web3'), num($('#web3-brl').value), $('#web3-pixkey').value.trim(), $('#coupon-web3').value.trim().toUpperCase());
