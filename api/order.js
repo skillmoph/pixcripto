@@ -1,9 +1,11 @@
 // POST /api/order — cria uma operação cripto -> PIX.
-// Com WOOVI_APP_ID (sandbox ou produção) cria a cobrança PIX de verdade na Woovi/OpenPix.
-// Sem a chave, roda em modo demonstração: devolve endereço de depósito simulado e código de resgate.
+// Rede Polygon com HOT_WALLET_XPUB + ORDER_HMAC_SECRET: MODO REAL de recebimento.
+// Gera endereço de depósito único derivado da carteira HD e um token assinado
+// (HMAC) que carrega os dados do pedido sem banco de dados. O monitoramento
+// on-chain acontece em /api/order-status.
+// Solana (ou sem xpub configurado): modo demonstração, como antes.
 import crypto from 'node:crypto';
-
-const WOOVI_API = process.env.WOOVI_API_URL || 'https://api.openpix.com.br';
+import { orderIndex, deriveAddress, signToken } from './_wallet.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
@@ -12,42 +14,26 @@ export default async function handler(req, res) {
   if (mode === 'pix' && !pixKey) return res.status(400).json({ error: 'pix_key_required' });
   if (!code) return res.status(400).json({ error: 'code_required' });
 
-  const appId = process.env.WOOVI_APP_ID;
-  if (appId) {
-    // Cobrança PIX real (sandbox ou produção, conforme a chave)
-    try {
-      const r = await fetch(`${WOOVI_API}/api/v1/charge?return_existing=true`, {
-        method: 'POST',
-        headers: { 'Authorization': appId, 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          correlationID: code,
-          value: Math.round(brl * 100), // centavos
-          type: 'DYNAMIC',
-          comment: `PixCripto ${code} ${usdt} USDT ${net}`,
-          expiresIn: 3600,
-          additionalInfo: [
-            { key: 'codigo', value: code },
-            { key: 'usdt', value: String(usdt) },
-            { key: 'rede', value: String(net) }
-          ]
-        })
-      });
-      const j = await r.json();
-      if (!r.ok) return res.status(502).json({ error: 'woovi_error', detail: j?.error || r.status });
-      return res.status(200).json({
-        provider: 'woovi',
-        code,
-        charge: j.charge?.correlationID,
-        brcode: j.charge?.brCode,
-        status: j.charge?.status || 'ACTIVE',
-        depositAddress: null // em produção: endereço USDT custodiado pelo parceiro de liquidez
-      });
-    } catch (e) {
-      return res.status(502).json({ error: 'woovi_unreachable' });
-    }
+  const xpub = process.env.HOT_WALLET_XPUB;
+  const secret = process.env.ORDER_HMAC_SECRET;
+
+  if (net === 'polygon' && xpub && secret) {
+    const idx = orderIndex(secret, code);
+    const depositAddress = deriveAddress(xpub, idx);
+    const token = signToken(secret, {
+      v: 1, code, idx, net,
+      usdt: Number(usdt), brl: Number(brl),
+      pixKey: mode === 'pix' ? String(pixKey) : null,
+      boleto: mode === 'boleto' ? String(boleto).slice(0, 60) : null,
+      ts: Date.now()
+    });
+    return res.status(200).json({
+      provider: 'onchain-polygon', code, depositAddress,
+      status: 'WAITING_DEPOSIT', token, feePct
+    });
   }
 
-  // ---- modo demonstração (sem chave) ----
+  // ---- modo demonstração (solana ou carteira não configurada) ----
   const depositAddress = net === 'solana'
     ? crypto.randomBytes(32).toString('base64').replace(/[^1-9A-HJ-NP-Za-km-z]/g, '').slice(0, 44)
     : '0x' + crypto.randomBytes(20).toString('hex');

@@ -401,7 +401,7 @@
 <footer>
   PixCripto — swaps rápidos e baratos, cross-chain · 2026<br>
   <a href="#" id="support-link">Falar com suporte</a> &nbsp;·&nbsp; <a href="#" id="tg-link">Grupo no Telegram</a>
-  <div class="demo-note">Ambiente de demonstração. Nenhuma operação real é executada sem a integração de pagamentos ativa.</div>
+  <div class="demo-note">Recebimento USDT on-chain ativo (rede Polygon). O repasse em PIX é ativado pela integração de pagamentos.</div>
 </footer>
 
 </div>
@@ -565,14 +565,15 @@ function showOrder(o){
   drawQR(10);
   setStatus('WAITING_DEPOSIT');
   clearInterval(poller);
-  poller=setInterval(()=>pollStatus(o.code),5000);
+  poller=setInterval(()=>pollStatus(o),5000);
 }
-async function pollStatus(code){
+async function pollStatus(o){
   try{
-    const r=await fetch('/api/order-status?code='+encodeURIComponent(code));
+    const q=o.token?('token='+encodeURIComponent(o.token)):('code='+encodeURIComponent(o.code));
+    const r=await fetch('/api/order-status?'+q);
     const j=await r.json();
     setStatus(j.status);
-    if(j.status==='PAID'||j.status==='FAILED') clearInterval(poller);
+    if(j.status==='PAID'||j.status==='FAILED'||j.status==='CONFIRMED_ONCHAIN') clearInterval(poller);
   }catch(e){}
 }
 function setStatus(st){
@@ -581,6 +582,7 @@ function setStatus(st){
     WAITING_DEPOSIT:['Aguardando depósito','Envie o valor exato para o endereço abaixo',false],
     CONFIRMING:['Depósito detectado','Confirmando na blockchain…',false],
     PROCESSING:['Enviando seu PIX','O PIX está sendo disparado para a chave informada',false],
+    CONFIRMED_ONCHAIN:['Depósito confirmado','USDT recebido na Polygon. O repasse PIX é ativado pela integração de pagamentos.',true],
     PAID:['PIX enviado','O comprovante fica disponível pelo código de resgate',true],
     FAILED:['Operação não concluída','O valor enviado é devolvido para a carteira de origem',true],
   };

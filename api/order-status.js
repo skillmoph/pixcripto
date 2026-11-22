@@ -1,26 +1,50 @@
-// GET /api/order-status?code=PIX-XXXX-XXXX
-// Com WOOVI_APP_ID consulta a cobrança real; sem chave, simula a progressão da operação demo.
-const WOOVI_API = process.env.WOOVI_API_URL || 'https://api.openpix.com.br';
+// GET /api/order-status?token=...  (modo real Polygon: lê o saldo USDT on-chain)
+// GET /api/order-status?code=...   (legado/demo)
+// Monitor: balanceOf(endereço derivado) no contrato oficial USDT (PoS) da Polygon
+// via RPC público gratuito, com fallback.
+import { deriveAddress, verifyToken } from './_wallet.js';
 
-export default async function handler(req, res) {
-  const code = req.query.code;
-  if (!code) return res.status(400).json({ error: 'code_required' });
+const USDT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; // USDT (PoS) na Polygon
+const RPCS = ['https://polygon-bor-rpc.publicnode.com', 'https://polygon.drpc.org'];
 
-  const appId = process.env.WOOVI_APP_ID;
-  if (appId) {
+async function usdtBalance(addr) {
+  const data = '0x70a08231' + addr.toLowerCase().replace('0x', '').padStart(64, '0');
+  for (const url of RPCS) {
     try {
-      const r = await fetch(`${WOOVI_API}/api/v1/charge/${encodeURIComponent(code)}`, {
-        headers: { 'Authorization': appId }
+      const r = await fetch(url, {
+        method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'eth_call', params: [{ to: USDT, data }, 'latest'] })
       });
       const j = await r.json();
-      if (!r.ok) return res.status(404).json({ error: 'not_found' });
-      const st = j.charge?.status; // ACTIVE | COMPLETED | EXPIRED
-      return res.status(200).json({ status: st === 'COMPLETED' ? 'PAID' : st === 'EXPIRED' ? 'FAILED' : 'WAITING_DEPOSIT', raw: st });
-    } catch (e) {
-      return res.status(502).json({ error: 'woovi_unreachable' });
-    }
+      if (j.result) return Number(BigInt(j.result)) / 1e6; // USDT tem 6 casas
+    } catch (e) { /* tenta o próximo RPC */ }
+  }
+  throw new Error('rpc_unreachable');
+}
+
+export default async function handler(req, res) {
+  const { token, code } = req.query || {};
+
+  if (token) {
+    const secret = process.env.ORDER_HMAC_SECRET;
+    const xpub = process.env.HOT_WALLET_XPUB;
+    const p = secret && verifyToken(secret, token);
+    if (!p || !xpub) return res.status(401).json({ error: 'invalid_token' });
+    const address = deriveAddress(xpub, p.idx);
+    let balance;
+    try { balance = await usdtBalance(address); }
+    catch (e) { return res.status(502).json({ error: 'rpc_unreachable' }); }
+    const expected = Number(p.usdt);
+    const status = balance <= 0 ? 'WAITING_DEPOSIT'
+      : balance + 1e-9 < expected ? 'CONFIRMING'        // depósito parcial
+      : 'CONFIRMED_ONCHAIN';                             // recebido; repasse PIX aguarda Woovi
+    return res.status(200).json({
+      status, provider: 'onchain-polygon', address,
+      balance, expected, code: p.code
+    });
   }
 
+  if (!code) return res.status(400).json({ error: 'code_required' });
   // demo: progride sozinha a partir de um relógio determinístico do código
   let h = 0; for (const c of code) h = (h * 31 + c.charCodeAt(0)) >>> 0;
   const phase = (Math.floor(Date.now() / 15000) + h) % 4;
