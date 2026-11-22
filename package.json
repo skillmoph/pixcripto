@@ -2,7 +2,12 @@
   "name": "pixcripto",
   "version": "0.1.0",
   "private": true,
-  "description": "PixCripto — clone funcional do fluxo USDT -> PIX (frontend + API serverless Vercel)",
-  "engines": { "node": ">=18" },
-  "dependencies": { "ethers": "^6.13.0" }
+  "description": "PixCripto \u2014 clone funcional do fluxo USDT -> PIX (frontend + API serverless Vercel)",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "@noble/curves": "^1.2.0"
+  }
 }

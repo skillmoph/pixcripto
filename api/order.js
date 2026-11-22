@@ -5,7 +5,7 @@
 // on-chain acontece em /api/order-status.
 // Solana (ou sem xpub configurado): modo demonstração, como antes.
 import crypto from 'node:crypto';
-import { orderIndex, deriveAddress, signToken } from './_wallet.js';
+import { orderIndex, deriveAddress, deriveSolanaAddress, signToken } from './_wallet.js';
 
 export default async function handler(req, res) {
   if (req.method !== 'POST') return res.status(405).json({ error: 'method_not_allowed' });
@@ -33,9 +33,23 @@ export default async function handler(req, res) {
     });
   }
 
-  // ---- modo demonstração (solana ou carteira não configurada) ----
-  const depositAddress = net === 'solana'
-    ? crypto.randomBytes(32).toString('base64').replace(/[^1-9A-HJ-NP-Za-km-z]/g, '').slice(0, 44)
-    : '0x' + crypto.randomBytes(20).toString('hex');
+  const solSeed = process.env.SOLANA_SEED;
+  if (net === 'solana' && solSeed && secret) {
+    const depositAddress = deriveSolanaAddress(solSeed, code);
+    const token = signToken(secret, {
+      v: 1, code, net,
+      usdt: Number(usdt), brl: Number(brl),
+      pixKey: mode === 'pix' ? String(pixKey) : null,
+      boleto: mode === 'boleto' ? String(boleto).slice(0, 60) : null,
+      ts: Date.now()
+    });
+    return res.status(200).json({
+      provider: 'onchain-solana', code, depositAddress,
+      status: 'WAITING_DEPOSIT', token, feePct
+    });
+  }
+
+  // ---- modo demonstração (carteira não configurada) ----
+  const depositAddress = '0x' + crypto.randomBytes(20).toString('hex');
   return res.status(200).json({ provider: 'demo', code, depositAddress, status: 'WAITING_DEPOSIT', feePct });
 }
