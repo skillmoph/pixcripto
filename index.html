@@ -317,6 +317,7 @@
     <div class="err" id="err-web3"></div>
     <div class="hint" style="margin-bottom:14px">Você envia USDT para o endereço de depósito e o PIX é disparado automaticamente. Sem carteira, sem extensão: basta copiar o endereço ou ler o QR Code.</div>
     <button class="cta" id="go-web3">Continuar</button>
+    <button class="btn2" id="wallet-connect" style="width:100%;margin-top:8px">Conectar carteira (opcional)</button>
   </section>
 
   <!-- ============ PRIVATE PIX ============ -->
@@ -367,6 +368,7 @@
       <div class="sub" id="swap-quote" style="margin-top:10px;font-size:13px;color:var(--ink-2)"></div>
     </div>
     <button class="cta" id="swap-go" disabled>Converter e receber em PIX</button>
+    <button class="btn2" id="swap-connect" style="width:100%;margin-top:8px">Conectar carteira (opcional)</button>
   </section>
 
   <!-- ============ ORDER VIEW ============ -->
@@ -637,6 +639,19 @@ $('#go-web3').addEventListener('click',()=>{
 $('#go-private').addEventListener('click',()=>{
   placeOrderFromFields($('#go-private'), num($('#priv-brl').value), $('#priv-pixkey').value.trim(), null);
 });
+
+/* ---------- carteira OPCIONAL (web3 / swap) — nunca bloqueia nem erra ---------- */
+async function connectWalletOptional(btn){
+  if(!window.ethereum){ toast('Sem carteira neste navegador — sem problema: siga pelo endereço + QR Code.'); return; }
+  try{
+    const acc = await window.ethereum.request({method:'eth_requestAccounts'});
+    btn.textContent = 'Carteira ' + acc[0].slice(0,6) + '…' + acc[0].slice(-4) + ' conectada';
+    btn.disabled = true;
+    toast('Carteira conectada. Você também pode seguir pelo endereço + QR Code.');
+  }catch(e){ toast('Conexão cancelada — pode seguir pelo endereço + QR Code mesmo.'); }
+}
+$('#wallet-connect').addEventListener('click',()=>connectWalletOptional($('#wallet-connect')));
+$('#swap-connect').addEventListener('click',()=>connectWalletOptional($('#swap-connect')));
 
 /* ---------- cotação real de swap (KyberSwap via /api/swap-quote) ---------- */
 let quoteTimer=null;
