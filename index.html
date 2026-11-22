@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PixCripto — USDT para PIX em minutos</title>
+<meta name="description" content="Converta USDT (Polygon/Solana) em PIX ou boleto, direto para qualquer chave. Rápido e sem burocracia.">
+<style>
+  :root{
+    --bg:#0a0a0f; --card:#12121a; --block:#1a1d29; --chip:#2a2a3a;
+    --line:rgba(255,255,255,.12); --line-soft:rgba(255,255,255,.08);
+    --text:#e8e8f0; --dim:#9ca3af; --dim2:#6b7280;
+    --accent:#7c5cff; --accent2:#818cf8; --cyan:#00d4a0; --magenta:#e05fff;
+    --green:#22c55e; --green-deep:#009767; --orange:#f75c2a;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{min-height:100%}
+  body{
+    background:var(--bg); color:var(--text);
+    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    display:flex; flex-direction:column; align-items:center;
+    padding:28px 14px 60px;
+    background-image:radial-gradient(700px 420px at 50% -80px, rgba(124,92,255,.16), transparent 70%);
+  }
+  header.top{width:480px;max-width:100%;display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;padding:0 4px}
+  .logo{font-weight:800;font-size:26px;letter-spacing:-0.5px;color:#f0eaff}
+  .logo span{background:linear-gradient(90deg,var(--accent2),var(--magenta) 55%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .rate{font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
+  .rate b{color:var(--text);font-weight:600}
+  .card{
+    width:480px;max-width:100%;border-radius:24px;padding:10px;
+    background:linear-gradient(150deg, rgba(255,255,255,.09), rgba(255,255,255,.03) 45%, rgba(124,92,255,.06));
+    border:1px solid var(--line);
+    box-shadow:0 8px 36px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.18), 0 0 80px -14px rgba(124,92,255,.5);
+    backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+  }
+  .tabs{display:flex;gap:6px;background:rgba(0,0,0,.28);border:1px solid var(--line-soft);border-radius:16px;padding:5px;margin-bottom:12px}
+  .tabs button{
+    flex:1;border:0;background:transparent;color:var(--dim);font:600 12.5px system-ui;
+    padding:9px 4px;border-radius:11px;cursor:pointer;white-space:nowrap;transition:all .15s;
+  }
+  .tabs button:hover{color:var(--text)}
+  .tabs button.on{background:var(--chip);color:var(--text);box-shadow:0 2px 10px rgba(0,0,0,.35)}
+  .pane{padding:2px 4px 6px}
+  .netrow{display:flex;gap:8px;margin-bottom:10px}
+  .net{
+    flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
+    background:var(--block);border:1.5px solid transparent;border-radius:14px;
+    color:var(--text);font:600 14px system-ui;padding:13px 8px;cursor:pointer;transition:all .15s;
+  }
+  .net .dot{width:8px;height:8px;border-radius:50%;background:var(--dim2)}
+  .net.sel{border-color:var(--accent);background:rgba(124,92,255,.10)}
+  .net.sel .dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
+  .net svg{width:18px;height:18px}
+  .limits{font-size:11.5px;color:var(--dim2);margin:-2px 2px 10px}
+  .swapbox{display:flex;gap:8px;align-items:stretch;position:relative;margin-bottom:10px}
+  .side{flex:1;background:var(--block);border:1px solid var(--line-soft);border-radius:14px;padding:11px 12px}
+  .side label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--dim);margin-bottom:6px}
+  .side label b{color:var(--green)}
+  .side input{
+    width:100%;background:transparent;border:0;outline:0;color:var(--text);
+    font:600 22px system-ui;font-variant-numeric:tabular-nums;
+  }
+  .side .sub{font-size:11px;color:var(--dim2);margin-top:4px}
+  .flip{
+    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
+    width:34px;height:34px;border-radius:50%;background:var(--chip);border:1px solid var(--line);
+    color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;
+  }
+  .flip:hover{background:#343647}
+  .paywith{display:flex;gap:8px;margin-bottom:12px}
+  .paywith button{
+    flex:1;border-radius:12px;border:1px solid var(--line-soft);background:var(--block);
+    color:var(--dim);font:600 13px system-ui;padding:11px;cursor:pointer;transition:all .15s;
+  }
+  .paywith button.on{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.4);color:#4ade80}
+  .paywith button.on.bol{background:rgba(255,158,0,.10);border-color:rgba(255,158,0,.35);color:#ffbc50}
+  .fld{margin-bottom:12px}
+  .fld label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--dim);margin-bottom:6px}
+  .fld .hint{font-size:11px;color:var(--dim2);margin-top:5px}
+  .inrow{display:flex;gap:8px}
+  input.txt{
+    flex:1;background:var(--block);border:1px solid var(--line-soft);border-radius:12px;
+    color:var(--text);font:500 14px system-ui;padding:12px 14px;outline:0;transition:border .15s;
+  }
+  input.txt:focus{border-color:var(--accent2)}
+  input.txt::placeholder{color:var(--dim2)}
+  .iconbtn{
+    width:46px;border-radius:12px;border:1px solid var(--line-soft);background:var(--block);
+    color:var(--dim);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
+  }
+  .iconbtn:hover{color:var(--text)}
+  .cta{
+    width:100%;border:0;border-radius:14px;padding:15px;cursor:pointer;
+    background:linear-gradient(180deg,#25cd63,#16a34a);color:#fff;font:700 15px system-ui;
+    box-shadow:0 6px 22px rgba(34,197,94,.28);transition:filter .15s, transform .05s;
+  }
+  .cta:hover{filter:brightness(1.07)}
+  .cta:active{transform:translateY(1px)}
+  .cta:disabled{background:var(--chip);color:var(--dim);box-shadow:none;cursor:not-allowed}
+  .cta.orange{background:linear-gradient(180deg,#ff6b35,#f75c2a);box-shadow:0 6px 22px rgba(247,92,42,.30)}
+  .receipt{margin-top:14px;border-top:1px solid var(--line-soft);padding-top:12px}
+  .receipt label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--dim);margin-bottom:6px}
+  .btn2{
+    border-radius:12px;border:1px solid var(--line-soft);background:var(--block);color:var(--text);
+    font:600 13px system-ui;padding:0 16px;cursor:pointer;
+  }
+  .btn2:hover{background:var(--chip)}
+  footer{margin-top:16px;text-align:center;font-size:11.5px;color:var(--dim2);line-height:1.7}
+  footer a{color:var(--dim);text-decoration:none}
+  footer a:hover{color:var(--text)}
+  .warn{
+    display:flex;gap:8px;align-items:flex-start;background:rgba(255,158,0,.08);
+    border:1px solid rgba(255,158,0,.25);border-radius:12px;padding:10px 12px;margin-bottom:12px;
+    font-size:12px;color:#ffd796;line-height:1.5;
+  }
+  .warn .tag{background:#ff9e00;color:#000;font:800 10px system-ui;border-radius:6px;padding:2px 7px;flex:none;margin-top:1px}
+  .wallet{
+    width:100%;border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;
+    background:var(--block);color:var(--text);font:600 14.5px system-ui;margin-bottom:12px;transition:all .15s;
+  }
+  .wallet:hover{border-color:var(--accent2)}
+  .wallet.ok{background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.4);color:#4ade80;cursor:default}
+  /* order status view */
+  .order{display:none}
+  .order.show{display:block}
+  .ostatus{display:flex;align-items:center;gap:10px;background:var(--block);border:1px solid var(--line-soft);border-radius:14px;padding:13px 14px;margin-bottom:12px}
+  .ostatus .pulse{width:10px;height:10px;border-radius:50%;background:#ff9e00;animation:pulse 1.2s infinite}
+  .ostatus.done .pulse{background:var(--green);animation:none}
+  .ostatus .t{font:600 14px system-ui}
+  .ostatus .s{font-size:11.5px;color:var(--dim)}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+  .depbox{background:#0d0f17;border:1px dashed rgba(255,255,255,.2);border-radius:14px;padding:14px;text-align:center;margin-bottom:12px}
+  .depbox .addr{font:500 12.5px ui-monospace,monospace;word-break:break-all;color:var(--text);margin:8px 0}
+  .depbox canvas{margin:6px auto;display:block;border-radius:10px;background:#fff;padding:8px}
+  .kv{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 2px;border-bottom:1px solid var(--line-soft)}
+  .kv:last-child{border-bottom:0}
+  .kv span{color:var(--dim)} .kv b{font-weight:600;font-variant-numeric:tabular-nums}
+  .rcode{background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.35);border-radius:12px;padding:12px;text-align:center;margin:12px 0}
+  .rcode b{font:700 18px ui-monospace,monospace;letter-spacing:.08em;color:#c8c2ff}
+  .rcode .s{font-size:11px;color:var(--dim);margin-top:4px}
+  .ghost{background:transparent;border:0;color:var(--dim);font:600 12.5px system-ui;cursor:pointer;margin-top:10px}
+  .ghost:hover{color:var(--text)}
+  .err{background:rgba(255,59,48,.10);border:1px solid rgba(255,59,48,.3);color:#ffb0bf;border-radius:12px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;display:none}
+  .err.show{display:block}
+  .selbox{position:relative}
+  .selbox select{
+    width:100%;appearance:none;background:var(--block);border:1px solid var(--line-soft);border-radius:12px;
+    color:var(--text);font:500 14px system-ui;padding:12px 14px;outline:0;cursor:pointer;
+  }
+  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1e2033;border:1px solid var(--line);color:var(--text);font:500 13px system-ui;padding:11px 18px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s}
+  .toast.show{opacity:1}
+  @media (max-width:520px){
+    .card{width:100%}
+    header.top{width:100%}
+    .swapbox{flex-direction:column}
+    .flip{transform:translate(-50%,-50%) rotate(90deg)}
+  }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="logo">Pix<span>Cripto</span></div>
+  <div class="rate">1 USDT = <b id="rate">R$ …</b></div>
+</header>
+
+<div class="card">
+  <nav class="tabs">
+    <button data-tab="direct" class="on">⚡ PIX Direto</button>
+    <button data-tab="web3">📱 PIX Web3</button>
+    <button data-tab="private">🔒 PIX Privado</button>
+    <button data-tab="swap">Swap</button>
+  </nav>
+
+  <!-- ============ TAB: PIX DIRECT ============ -->
+  <section class="pane" id="tab-direct">
+    <div class="netrow" id="net-direct">
+      <button class="net sel" data-net="polygon">
+        <svg viewBox="0 0 24 24" fill="#8247e5"><path d="M16.7 9.3c-.3-.2-.7-.2-1 0l-2.3 1.3-1.5.9-2.3 1.4c-.3.2-.7.2-1 0L6.5 11.6c-.3-.2-.5-.6-.5-.9V8.3c0-.3.2-.7.5-.9l2.2-1.3c.3-.2.7-.2 1 0l2.2 1.3c.3.2.5.6.5.9v1.5l1.5-.9V7.2c0-.3-.2-.7-.5-.9L11 4.8c-.3-.2-.7-.2-1 0L7.5 6.3c-.3.2-.5.6-.5.9v3c0 .3.2.7.5.9l2.5 1.5c.3.2.7.2 1 0l2.3-1.4 1.5-.9 2.3-1.3c.3-.2.7-.2 1 0l2.2 1.3c.3.2.5.6.5.9v2.3c0 .3-.2.7-.5.9l-2.3 1.3c-.3.2-.7.2-1 0l-2.2-1.3c-.3-.2-.5-.6-.5-.9v-1.5l-1.5.9v1.5c0 .3.2.7.5.9l2.5 1.5c.3.2.7.2 1 0l2.5-1.5c.3-.2.5-.6.5-.9v-3c0-.3-.2-.7-.5-.9l-2.4-1.5z"/></svg>
+        Polygon
+      </button>
+      <button class="net" data-net="solana">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M6 15.5l2.5-2.5h11l-2.5 2.5H6z" fill="#9945FF"/><path d="M6 8.5L8.5 6h11l-2.5 2.5H6z" fill="#14F195"/><path d="M6 12l2.5-2.5h11L17 12H6z" fill="#00C2FF"/></svg>
+        Solana
+      </button>
+    </div>
+    <div class="limits">Mínimo: R$ 10,00 · Máximo: R$ 250.000,00 por transação.</div>
+
+    <div class="swapbox">
+      <div class="side">
+        <label>VOCÊ ENVIA — <b>USDT</b></label>
+        <input id="send-usdt" type="text" inputmode="decimal" placeholder="0,00">
+        <div class="sub" id="net-label">rede Polygon</div>
+      </div>
+      <button class="flip" id="flip" title="Inverter">⇄</button>
+      <div class="side">
+        <label>VOCÊ RECEBE — BRL</label>
+        <input id="recv-brl" type="text" inputmode="decimal" placeholder="0,00">
+        <div class="sub">transferência PIX</div>
+      </div>
+    </div>
+
+    <div class="paywith" id="paywith-direct">
+      <button class="on" data-mode="pix">⚡ PIX</button>
+      <button data-mode="boleto" class="bol">🧾 Boleto</button>
+    </div>
+
+    <div class="fld" id="fld-pixkey">
+      <label>PARA ONDE VAI O SEU PIX?</label>
+      <div class="inrow">
+        <input class="txt" id="pixkey" placeholder="Chave PIX (CPF, celular +55, e-mail ou aleatória)">
+        <button class="iconbtn" id="qr-scan" title="Ler QR code">📷</button>
+      </div>
+      <div class="hint">O PIX é enviado automaticamente para essa chave após a confirmação do depósito.</div>
+    </div>
+
+    <div class="fld" id="fld-boleto" style="display:none">
+      <label>LINHA DIGITÁVEL DO BOLETO</label>
+      <input class="txt" id="boleto-line" placeholder="00000.00000 00000.000000 00000.000000 0 00000000000000" maxlength="54">
+      <div class="hint">Boletos vencidos não são aceitos. O valor é lido da própria linha.</div>
+    </div>
+
+    <div class="fld">
+      <label>CUPOM (OPCIONAL)</label>
+      <input class="txt" id="coupon-direct" placeholder="código do cupom">
+      <div class="hint" id="coupon-hint-direct"></div>
+    </div>
+
+    <div class="err" id="err-direct"></div>
+    <button class="cta" id="go-direct" disabled>Continuar →</button>
+
+    <div class="receipt">
+      <label>CONSULTAR COMPROVANTE — CÓDIGO DE RESGATE</label>
+      <div class="inrow">
+        <input class="txt" id="receipt-code" placeholder="PIX-XXXX-XXXX">
+        <button class="iconbtn" title="Mostrar dados sensíveis">👁</button>
+        <button class="btn2" id="receipt-check">verificar</button>
+      </div>
+      <div class="hint" id="receipt-result"></div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: PIX WEB3 ============ -->
+  <section class="pane" id="tab-web3" style="display:none">
+    <button class="wallet" id="wallet-connect">📱 Conectar carteira</button>
+    <div class="netrow" id="net-web3">
+      <button class="net sel" data-net="polygon">Polygon · USDT</button>
+      <button class="net" data-net="solana">Solana · USDT</button>
+    </div>
+    <div class="limits">Mínimo: R$ 3,00 · Máximo: R$ 250.000,00 por transação.</div>
+
+    <div class="fld">
+      <label>VALOR DO PIX — VOCÊ RECEBE (R$)</label>
+      <input class="txt" id="web3-brl" type="text" inputmode="decimal" placeholder="0,00" style="font-size:20px;font-weight:600">
+      <div class="hint" id="web3-usdt-est">≈ 0,00 USDT da sua carteira</div>
+    </div>
+
+    <div class="paywith" id="paywith-web3">
+      <button class="on" data-mode="pix">⚡ PIX</button>
+      <button data-mode="boleto" class="bol">🧾 Boleto</button>
+    </div>
+
+    <div class="fld">
+      <label>CHAVE PIX (CPF, CELULAR +55, E-MAIL OU ALEATÓRIA)</label>
+      <div class="inrow">
+        <input class="txt" id="web3-pixkey" placeholder="Chave PIX (CPF, celular +55, e-mail ou aleatória)">
+        <button class="iconbtn" title="Ler QR code">📷</button>
+      </div>
+    </div>
+
+    <div class="fld">
+      <label>CUPOM (OPCIONAL)</label>
+      <input class="txt" id="coupon-web3" placeholder="código do cupom">
+    </div>
+
+    <div class="err" id="err-web3"></div>
+    <div class="fld" style="font-size:11.5px;color:var(--dim2);line-height:1.6">
+      O seu USDT sai da sua carteira para a PixCripto e o PIX é disparado automaticamente. Se algo falhar, o USDT volta para a carteira conectada.
+    </div>
+    <button class="cta" id="go-web3">Enviar USDT e disparar PIX</button>
+
+    <div class="receipt">
+      <label>COMPROVANTE — CÓDIGO DE RESGATE</label>
+      <div class="inrow">
+        <input class="txt" placeholder="PIX-XXXX-XXXX">
+        <button class="iconbtn" title="Mostrar dados sensíveis">👁</button>
+        <button class="btn2">verificar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: PRIVATE PIX ============ -->
+  <section class="pane" id="tab-private" style="display:none">
+    <div class="warn"><span class="tag">BETA</span><span>Esse recurso está em beta — use valores pequenos enquanto ajustamos.</span></div>
+    <div class="fld" style="font-size:12px;color:var(--dim)">Pague com qualquer token (escolha abaixo) — a liquidação é sempre em USDT na Polygon.</div>
+
+    <div class="swapbox" style="flex-direction:column">
+      <div class="side">
+        <label>PAGAR EM <span id="priv-chain">Ethereum</span></label>
+        <div class="inrow">
+          <input class="txt" id="priv-amount" value="1" inputmode="decimal" style="font-size:20px;font-weight:600">
+          <div class="selbox" style="width:120px;flex:none">
+            <select id="priv-token"><option>USDC</option><option>USDT</option><option>ETH</option><option>DAI</option></select>
+          </div>
+        </div>
+      </div>
+    </div>
+    <button class="cta orange" id="priv-connect" style="margin-bottom:12px">Conectar carteira</button>
+
+    <div class="fld">
+      <label>VALOR EM BRL <span style="float:right;font-weight:400">mín 10 USDT · máx R$ 10.000,00</span></label>
+      <input class="txt" id="priv-brl" value="100,00" inputmode="decimal">
+    </div>
+    <button class="btn2" id="priv-calc" style="width:100%;padding:11px;margin-bottom:12px;color:#4ade80">calcular</button>
+
+    <div class="fld">
+      <label>CHAVE PIX</label>
+      <input class="txt" id="priv-pixkey" placeholder="Chave PIX (CPF/CNPJ, celular +55, e-mail ou aleatória)">
+    </div>
+    <div class="fld">
+      <label>CUPOM (OPCIONAL)</label>
+      <input class="txt" placeholder="código do cupom">
+    </div>
+    <button class="cta" id="go-private">Enviar PIX</button>
+    <div class="limits" style="margin-top:8px">Limites: mínimo 10 USDT · máximo R$ 10.000,00 por transação</div>
+
+    <div class="receipt">
+      <label>CONSULTAR COMPROVANTE — CÓDIGO DE RESGATE</label>
+      <div class="inrow">
+        <input class="txt" placeholder="PIX-XXXX-XXXX">
+        <button class="iconbtn" title="Mostrar dados sensíveis">👁</button>
+        <button class="btn2">verificar</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ TAB: SWAP ============ -->
+  <section class="pane" id="tab-swap" style="display:none">
+    <div class="side" style="margin-bottom:10px">
+      <label>SWAP</label>
+      <div class="fld" style="margin-bottom:0">
+        <label>PAGAR EM <span>Ethereum</span></label>
+        <div class="inrow">
+          <input class="txt" id="swap-amount" value="1" inputmode="decimal" style="font-size:20px;font-weight:600">
+          <div class="selbox" style="width:120px;flex:none">
+            <select id="swap-from"><option>USDC</option><option>USDT</option><option>ETH</option><option>DAI</option><option>WBTC</option></select>
+          </div>
+        </div>
+        <div class="hint" id="swap-from-usd">≈ $1.00</div>
+      </div>
+    </div>
+    <div style="text-align:center;margin:-4px 0 6px"><button class="flip" style="position:static;transform:none" title="Inverter">↓</button></div>
+    <div class="side" style="margin-bottom:12px">
+      <label>RECEBER</label>
+      <div class="selbox">
+        <select id="swap-to"><option value="">Selecionar token</option><option>USDT</option><option>USDC</option><option>ETH</option><option>MATIC</option><option>DAI</option></select>
+      </div>
+      <div class="hint" id="swap-quote"></div>
+    </div>
+    <button class="cta orange" id="swap-connect">Conectar carteira</button>
+  </section>
+
+  <!-- ============ ORDER VIEW (shared) ============ -->
+  <section class="pane order" id="order-view">
+    <div class="ostatus" id="os-box">
+      <div class="pulse"></div>
+      <div><div class="t" id="os-title">Aguardando depósito</div><div class="s" id="os-sub">Envie o valor exato para o endereço abaixo</div></div>
+    </div>
+    <div class="depbox">
+      <div style="font-size:11px;color:var(--dim)">ENDEREÇO DE DEPÓSITO (<span id="os-net">Polygon</span>)</div>
+      <div class="addr" id="os-addr">…</div>
+      <canvas id="os-qr" width="164" height="164"></canvas>
+      <button class="btn2" id="os-copy" style="padding:9px 18px">copiar endereço</button>
+    </div>
+    <div class="kv"><span>Você envia</span><b id="os-send">—</b></div>
+    <div class="kv"><span>Você recebe</span><b id="os-recv">—</b></div>
+    <div class="kv"><span>Cotação</span><b id="os-rate">—</b></div>
+    <div class="kv"><span>Taxa</span><b id="os-fee">—</b></div>
+    <div class="kv"><span>Destino PIX</span><b id="os-dest">—</b></div>
+    <div class="rcode">
+      <div style="font-size:10.5px;color:var(--dim);margin-bottom:4px">SEU CÓDIGO DE RESGATE</div>
+      <b id="os-code">PIX-0000-0000</b>
+      <div class="s">Guarde esse código. É ele que comprova e recupera a sua operação.</div>
+    </div>
+    <button class="ghost" id="os-back">← nova operação</button>
+  </section>
+</div>
+
+<footer>
+  PixCripto — Swaps rápidos e baratos, cross-chain — 2026<br>
+  <a href="#" id="support-link">Falar com suporte</a> · <a href="#" id="tg-link">Grupo no Telegram</a><br>
+  <span style="font-size:10.5px">Ambiente de demonstração. Nenhuma operação real é executada sem integração de pagamentos ativa.</span>
+</footer>
+
+<div class="toast" id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js" defer></script>
+<script>
+/* ================= PixCripto — front ================= */
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
+const num = s => parseFloat(String(s).replace(/\./g,'').replace(',','.').replace(/[^\d.]/g,''))||0;
+const fmt = n => n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
+
+const state = { rate:null, feePct:4, net:'polygon', dir:'send', couponPct:null };
+
+/* ---------- live rate ---------- */
+async function loadRate(){
+  try{
+    const r = await fetch('/api/quote'); const j = await r.json();
+    state.rate = j.brl;
+  }catch(e){ state.rate = null; }
+  $('#rate').textContent = state.rate ? 'R$ '+fmt(state.rate) : 'indisponível';
+  recalc();
+}
+function effRate(){ // fee embedded in rate
+  const pct = state.couponPct ?? state.feePct;
+  return state.rate ? state.rate * (1 - pct/100) : null;
+}
+
+/* ---------- conversion ---------- */
+let editing = 'send';
+function recalc(){
+  const r = effRate(); if(!r) return;
+  if(editing==='send'){
+    const u = num($('#send-usdt').value);
+    $('#recv-brl').value = u? fmt(u*r) : '';
+  }else{
+    const b = num($('#recv-brl').value);
+    $('#send-usdt').value = b? fmt(b/r) : '';
+  }
+  validate();
+}
+$('#send-usdt').addEventListener('input',()=>{editing='send';recalc();});
+$('#recv-brl').addEventListener('input',()=>{editing='recv';recalc();});
+$('#flip').addEventListener('click',()=>{ editing = editing==='send'?'recv':'send';
+  const a=$('#send-usdt').value; $('#send-usdt').value=$('#recv-brl').value; $('#recv-brl').value=a; recalc(); toast('Ordem de preenchimento invertida'); });
+
+/* ---------- tabs ---------- */
+$$('.tabs button').forEach(b=>b.addEventListener('click',()=>{
+  $$('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+  $$('.pane').forEach(p=>p.style.display='none');
+  $('#tab-'+b.dataset.tab).style.display='block';
+}));
+
+/* ---------- networks ---------- */
+$$('.netrow').forEach(row=>row.addEventListener('click',e=>{
+  const btn=e.target.closest('.net'); if(!btn)return;
+  row.querySelectorAll('.net').forEach(x=>x.classList.toggle('sel',x===btn));
+  if(row.id==='net-direct'){ state.net=btn.dataset.net; $('#net-label').textContent='rede '+btn.textContent.trim(); }
+}));
+
+/* ---------- pay with ---------- */
+$$('.paywith').forEach(pw=>pw.addEventListener('click',e=>{
+  const btn=e.target.closest('button'); if(!btn)return;
+  pw.querySelectorAll('button').forEach(x=>x.classList.remove('on','bol'));
+  btn.classList.add('on'); if(btn.dataset.mode==='boleto')btn.classList.add('bol');
+  if(pw.id==='paywith-direct'){
+    $('#fld-pixkey').style.display = btn.dataset.mode==='pix'?'block':'none';
+    $('#fld-boleto').style.display = btn.dataset.mode==='boleto'?'block':'none';
+    validate();
+  }
+}));
+
+/* ---------- PIX key validation ---------- */
+function pixKeyOk(v){
+  v=v.trim(); if(!v) return false;
+  if(/^\d{11}$/.test(v)) return true;                       // CPF
+  if(/^\d{14}$/.test(v)) return true;                       // CNPJ
+  if(/^\+?55?\d{10,11}$/.test(v.replace(/\D/g,'')) && /\d{10,13}$/.test(v.replace(/\D/g,''))) return true; // phone
+  if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return true;     // email
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return true; // EVP
+  return v.length>=32;                                       // random key fallback
+}
+function modeDirect(){ return $('#paywith-direct .on').dataset.mode; }
+
+/* ---------- coupon ---------- */
+$('#coupon-direct').addEventListener('input', e=>{
+  const c=e.target.value.trim().toUpperCase();
+  const map={PRIMEIRO:2, ACADEME:2, PIXCRIPTO2:2};
+  if(!c){ state.couponPct=null; $('#coupon-hint-direct').textContent=''; }
+  else if(map[c]){ state.couponPct=map[c]; $('#coupon-hint-direct').textContent='✓ Cupom aplicado: taxa reduzida para '+map[c]+'%'; }
+  else { state.couponPct=null; $('#coupon-hint-direct').textContent='Cupom não encontrado.'; }
+  recalc();
+});
+
+/* ---------- validation / CTA ---------- */
+function validate(){
+  const err=$('#err-direct'); err.classList.remove('show');
+  const r=effRate(); const brl=num($('#recv-brl').value); const usdt=num($('#send-usdt').value);
+  let msg='';
+  if(!r) msg='Cotação indisponível no momento. Tente de novo em instantes.';
+  else if(!brl||!usdt) msg='';
+  else if(brl<10) msg='O mínimo é R$ 10,00 por transação.';
+  else if(brl>250000) msg='O máximo é R$ 250.000,00 por transação.';
+  else if(modeDirect()==='pix' && !pixKeyOk($('#pixkey').value)) msg='';
+  $('#go-direct').disabled = !r || !brl || brl<10 || brl>250000 ||
+    (modeDirect()==='pix' ? !pixKeyOk($('#pixkey').value) : $('#boleto-line').value.replace(/\D/g,'').length<47);
+  if(msg){ err.textContent=msg; err.classList.add('show'); }
+}
+['#pixkey','#boleto-line'].forEach(s=>$(s).addEventListener('input',validate));
+
+/* ---------- order flow ---------- */
+function codeGen(){ const h=()=>Math.random().toString(16).slice(2,6).toUpperCase(); return `PIX-${h()}-${h()}`; }
+function fakeAddr(){ return state.net==='polygon'
+  ? '0x'+[...crypto.getRandomValues(new Uint8Array(20))].map(b=>b.toString(16).padStart(2,'0')).join('')
+  : [...crypto.getRandomValues(new Uint8Array(32))].map(b=>"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"[b%58]).join(''); }
+
+let currentOrder=null, poller=null;
+async function createOrder(payload){
+  const r = await fetch('/api/order',{method:'POST',headers:{'content-type':'application/json'},body:JSON.stringify(payload)});
+  if(!r.ok) throw new Error('Falha ao criar a operação ('+r.status+')');
+  return r.json();
+}
+$('#go-direct').addEventListener('click', async ()=>{
+  const payload={
+    mode: modeDirect(), net: state.net,
+    usdt: num($('#send-usdt').value), brl: num($('#recv-brl').value),
+    rate: effRate(), feePct: state.couponPct ?? state.feePct,
+    pixKey: $('#pixkey').value.trim(), boleto: $('#boleto-line').value.trim(),
+    coupon: $('#coupon-direct').value.trim().toUpperCase()||null,
+    code: codeGen()
+  };
+  $('#go-direct').disabled=true; $('#go-direct').textContent='Criando operação…';
+  try{
+    const order = await createOrder(payload);
+    currentOrder = {...payload, ...order};
+    if(!currentOrder.depositAddress) currentOrder.depositAddress=fakeAddr();
+    const store=JSON.parse(localStorage.getItem('pixcripto_orders')||'{}');
+    store[currentOrder.code]={...currentOrder, ts:Date.now(), status:'WAITING_DEPOSIT'};
+    localStorage.setItem('pixcripto_orders',JSON.stringify(store));
+    showOrder(currentOrder);
+  }catch(e){ toast(e.message); }
+  $('#go-direct').disabled=false; $('#go-direct').textContent='Continuar →';
+});
+
+function showOrder(o){
+  $$('.pane').forEach(p=>{p.style.display='none'}); $('#order-view').classList.add('show'); $('#order-view').style.display='block';
+  $('#os-net').textContent = o.net==='polygon'?'Polygon':'Solana';
+  $('#os-addr').textContent = o.depositAddress;
+  $('#os-send').textContent = fmt(o.usdt)+' USDT';
+  $('#os-recv').textContent = BRL.format(o.brl);
+  $('#os-rate').textContent = '1 USDT = '+BRL.format(o.rate);
+  $('#os-fee').textContent = o.feePct+'%';
+  $('#os-dest').textContent = o.mode==='pix' ? o.pixKey : 'Boleto '+o.boleto.slice(0,18)+'…';
+  $('#os-code').textContent = o.code;
+  const c=$('#os-qr');
+  if(window.QRCode){ QRCode.toCanvas(c, o.depositAddress, {width:164, margin:0}, ()=>{}); }
+  else { c.style.display='none'; }
+  setStatus('WAITING_DEPOSIT');
+  clearInterval(poller);
+  poller=setInterval(()=>pollStatus(o.code),5000);
+}
+async function pollStatus(code){
+  try{
+    const r=await fetch('/api/order-status?code='+encodeURIComponent(code));
+    const j=await r.json();
+    setStatus(j.status);
+    if(j.status==='PAID'||j.status==='FAILED') clearInterval(poller);
+  }catch(e){}
+}
+function setStatus(st){
+  const box=$('#os-box');
+  const map={
+    WAITING_DEPOSIT:['Aguardando depósito','Envie o valor exato para o endereço abaixo',false],
+    CONFIRMING:['Depósito detectado','Confirmando na blockchain…',false],
+    PROCESSING:['Enviando seu PIX','O PIX está sendo disparado para a chave informada',false],
+    PAID:['PIX enviado ✓','O comprovante fica disponível pelo código de resgate',true],
+    FAILED:['Operação não concluída','O valor enviado é devolvido para a carteira de origem',true],
+  };
+  const [t,s,done]=map[st]||map.WAITING_DEPOSIT;
+  $('#os-title').textContent=t; $('#os-sub').textContent=s; box.classList.toggle('done',done);
+}
+$('#os-back').addEventListener('click',()=>{
+  clearInterval(poller); $('#order-view').classList.remove('show'); $('#order-view').style.display='none';
+  $('#tab-direct').style.display='block';
+  $$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab==='direct'));
+});
+$('#os-copy').addEventListener('click',()=>{ navigator.clipboard.writeText($('#os-addr').textContent).then(()=>toast('Endereço copiado')); });
+
+/* ---------- receipt check ---------- */
+$('#receipt-check').addEventListener('click', async ()=>{
+  const code=$('#receipt-code').value.trim().toUpperCase();
+  const out=$('#receipt-result');
+  if(!/^PIX-[0-9A-F]{4}-[0-9A-F]{4}$/.test(code)){ out.textContent='Formato esperado: PIX-XXXX-XXXX'; return; }
+  try{
+    const r=await fetch('/api/receipt?code='+encodeURIComponent(code)); const j=await r.json();
+    if(j.found){ out.innerHTML=`✓ ${j.statusLabel} — ${j.brl} para ${j.dest} · ${j.when}`; return; }
+  }catch(e){}
+  const store=JSON.parse(localStorage.getItem('pixcripto_orders')||'{}');
+  const o=store[code];
+  out.textContent = o ? `✓ Registrada neste navegador — ${BRL.format(o.brl)} para ${o.pixKey||'boleto'}` : 'Nenhuma operação encontrada com esse código.';
+});
+
+/* ---------- web3 tab ---------- */
+$('#wallet-connect').addEventListener('click', async ()=>{
+  if(!window.ethereum){ toast('Nenhuma carteira encontrada. Instale MetaMask ou use o PIX Direto.'); return; }
+  try{
+    const acc = await window.ethereum.request({method:'eth_requestAccounts'});
+    const b=$('#wallet-connect'); b.classList.add('ok'); b.textContent='✓ '+acc[0].slice(0,6)+'…'+acc[0].slice(-4);
+  }catch(e){ toast('Conexão recusada.'); }
+});
+$('#web3-brl').addEventListener('input',()=>{
+  const r=effRate(); const b=num($('#web3-brl').value);
+  $('#web3-usdt-est').textContent = r&&b ? '≈ '+fmt(b/r)+' USDT da sua carteira' : '≈ 0,00 USDT da sua carteira';
+});
+$('#go-web3').addEventListener('click',()=>{
+  const w=$('#wallet-connect');
+  if(!w.classList.contains('ok')){ toast('Conecte a carteira primeiro — ou use a aba PIX Direto, que não precisa de carteira.'); return; }
+  toast('Integração Web3 de envio direto entra com a conta de pagamentos ativa. Use o PIX Direto por enquanto.');
+});
+
+/* ---------- private / swap tabs ---------- */
+$('#priv-connect').addEventListener('click',()=>toast('Conexão de carteira do modo privado chega com a integração de pagamentos.'));
+$('#swap-connect').addEventListener('click',()=>toast('Conexão de carteira do swap chega com a integração de pagamentos.'));
+$('#priv-calc').addEventListener('click',()=>{
+  const r=effRate(); const b=num($('#priv-brl').value);
+  toast(r&&b ? 'Estimativa: '+fmt(b/r)+' USDT equivalentes' : 'Cotação indisponível');
+});
+$('#go-private').addEventListener('click',()=>toast('Modo privado em beta: use o PIX Direto por enquanto.'));
+$('#swap-to').addEventListener('change',()=>{
+  const t=$('#swap-to').value;
+  $('#swap-quote').textContent = t ? 'Cotação ao vivo chega com a integração de swap (mesma infra de pagamentos).' : '';
+});
+
+/* ---------- misc ---------- */
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),3200); }
+$('#support-link').addEventListener('click',e=>{e.preventDefault();toast('Suporte: canal direto chega com o lançamento.');});
+$('#tg-link').addEventListener('click',e=>{e.preventDefault();toast('Grupo do Telegram chega com o lançamento.');});
+
+loadRate(); setInterval(loadRate,30000);
+</script>
+</body>
+</html>
