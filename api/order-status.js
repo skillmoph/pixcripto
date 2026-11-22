@@ -3,6 +3,7 @@
 // Monitor: balanceOf(endereço derivado) no contrato oficial USDT (PoS) da Polygon
 // via RPC público gratuito, com fallback.
 import { deriveAddress, verifyToken } from './_wallet.js';
+import { ensurePixTransfer, asaasSandbox } from './_asaas.js';
 
 const USDT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; // USDT (PoS) na Polygon
 const RPCS = ['https://polygon-bor-rpc.publicnode.com', 'https://polygon.drpc.org'];
@@ -35,12 +36,20 @@ export default async function handler(req, res) {
     try { balance = await usdtBalance(address); }
     catch (e) { return res.status(502).json({ error: 'rpc_unreachable' }); }
     const expected = Number(p.usdt);
-    const status = balance <= 0 ? 'WAITING_DEPOSIT'
+    let status = balance <= 0 ? 'WAITING_DEPOSIT'
       : balance + 1e-9 < expected ? 'CONFIRMING'        // depósito parcial
-      : 'CONFIRMED_ONCHAIN';                             // recebido; repasse PIX aguarda Woovi
+      : 'CONFIRMED_ONCHAIN';                             // recebido on-chain
+    let payout = null;
+    if (status === 'CONFIRMED_ONCHAIN' && p.pixKey && p.brl) {
+      // repasse PIX via Asaas (sandbox enquanto ASAAS_BASE_URL aponta para api-sandbox)
+      const t = await ensurePixTransfer({ code: p.code, brl: p.brl, pixKey: p.pixKey });
+      payout = { provider: 'asaas', sandbox: asaasSandbox(), ...t };
+      if (t.status === 'DONE') status = 'PAID';
+      else if (!t.error && !t.skipped) status = 'PROCESSING';
+    }
     return res.status(200).json({
       status, provider: 'onchain-polygon', address,
-      balance, expected, code: p.code
+      balance, expected, code: p.code, payout
     });
   }
 

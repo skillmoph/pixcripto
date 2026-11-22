@@ -630,22 +630,25 @@ async function pollStatus(o){
     const q=o.token?('token='+encodeURIComponent(o.token)):('code='+encodeURIComponent(o.code));
     const r=await fetch('/api/order-status?'+q);
     const j=await r.json();
-    setStatus(j.status);
-    if(j.status==='PAID'||j.status==='FAILED'||j.status==='CONFIRMED_ONCHAIN') clearInterval(poller);
+    setStatus(j.status, j.payout);
+    const payoutDone=j.payout && j.payout.status==='DONE';
+    if(j.status==='PAID'||j.status==='FAILED') clearInterval(poller);
+    else if(j.status==='CONFIRMED_ONCHAIN' && (!j.payout || payoutDone || j.payout.error || j.payout.skipped)) clearInterval(poller);
   }catch(e){}
 }
-function setStatus(st){
+function setStatus(st, payout){
   const box=$('#os-box');
   const map={
     WAITING_DEPOSIT:['Aguardando depósito','Envie o valor exato para o endereço abaixo',false],
     CONFIRMING:['Depósito detectado','Confirmando na blockchain…',false],
     PROCESSING:['Enviando seu PIX','O PIX está sendo disparado para a chave informada',false],
-    CONFIRMED_ONCHAIN:['Depósito confirmado','USDT recebido na Polygon. O repasse PIX é ativado pela integração de pagamentos.',true],
-    PAID:['PIX enviado','O comprovante fica disponível pelo código de resgate',true],
+    CONFIRMED_ONCHAIN:['Depósito confirmado','USDT recebido na Polygon. Enviando o PIX…',false],
+    PAID:['PIX enviado','O PIX foi enviado para a sua chave. Guarde o código da operação.',true],
     FAILED:['Operação não concluída','O valor enviado é devolvido para a carteira de origem',true],
   };
   const [t,s,done]=map[st]||map.WAITING_DEPOSIT;
-  $('#os-title').textContent=t; $('#os-sub').textContent=s; box.classList.toggle('done',done);
+  const tag=(payout&&payout.sandbox)?' · MODO SANDBOX (teste)':'';
+  $('#os-title').textContent=t+tag; $('#os-sub').textContent=s; box.classList.toggle('done',done);
 }
 $('#os-back').addEventListener('click',()=>{
   clearInterval(poller); $('#order-view').classList.remove('on');
