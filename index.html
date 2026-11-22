@@ -4,177 +4,221 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>PixCripto — USDT para PIX em minutos</title>
-<meta name="description" content="Converta USDT (Polygon/Solana) em PIX ou boleto, direto para qualquer chave. Rápido e sem burocracia.">
+<meta name="description" content="Converta USDT em PIX ou boleto, direto para qualquer chave. Rápido e sem burocracia.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Figtree:ital,wght@0,400;0,500;0,600;0,700;0,800;1,400&display=swap" rel="stylesheet">
 <style>
+  /* ===== PixCripto look (Stageshow: uma família neutra, cinco tintas, um acento) ===== */
   :root{
-    --bg:#0a0a0f; --card:#12121a; --block:#1a1d29; --chip:#2a2a3a;
-    --line:rgba(255,255,255,.12); --line-soft:rgba(255,255,255,.08);
-    --text:#e8e8f0; --dim:#9ca3af; --dim2:#6b7280;
-    --accent:#7c5cff; --accent2:#818cf8; --cyan:#00d4a0; --magenta:#e05fff;
-    --green:#22c55e; --green-deep:#009767; --orange:#f75c2a;
+    --canvas:#f6f6f4; --surface:#ffffff; --well:#f0f0ed; --raised:#ffffff;
+    --line:rgba(16,16,20,.09); --line-soft:rgba(16,16,20,.055);
+    --ink:#101014; --ink-2:#4b4b52; --ink-3:#8a8a92; --ink-4:#b9b9bf;
+    --accent:#0c8f7d; --accent-ink:#0a7c6c; --accent-soft:rgba(12,143,125,.09);
+    --danger:#d92d20; --warn:#b54708;
+    --mono:ui-monospace,"SF Mono",Menlo,monospace;
+    --r-lg:18px; --r-md:12px; --r-sm:9px;
+    --shadow-card:0 1px 2px rgba(16,16,20,.04),0 12px 40px -12px rgba(16,16,20,.10);
+    --t:125ms cubic-bezier(.4,0,.2,1);
   }
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{min-height:100%}
   body{
-    background:var(--bg); color:var(--text);
-    font-family:system-ui,-apple-system,"Segoe UI",sans-serif;
+    background:var(--canvas); color:var(--ink);
+    font-family:"Figtree",system-ui,-apple-system,sans-serif;
+    font-feature-settings:"tnum" 1,"ss01" 1;
     display:flex; flex-direction:column; align-items:center;
-    padding:28px 14px 60px;
-    background-image:radial-gradient(700px 420px at 50% -80px, rgba(124,92,255,.16), transparent 70%);
+    padding:40px 16px 72px;
+    -webkit-font-smoothing:antialiased;
   }
-  header.top{width:480px;max-width:100%;display:flex;align-items:baseline;justify-content:space-between;margin-bottom:14px;padding:0 4px}
-  .logo{font-weight:800;font-size:26px;letter-spacing:-0.5px;color:#f0eaff}
-  .logo span{background:linear-gradient(90deg,var(--accent2),var(--magenta) 55%,var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
-  .rate{font-size:12.5px;color:var(--dim);font-variant-numeric:tabular-nums}
-  .rate b{color:var(--text);font-weight:600}
+  .wrap{width:460px;max-width:100%}
+
+  /* ===== topo ===== */
+  header.top{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;padding:0 2px}
+  .wordmark{font-weight:800;font-size:21px;letter-spacing:-.03em;color:var(--ink)}
+  .wordmark em{font-style:normal;color:var(--accent)}
+  .rate{
+    display:flex;align-items:baseline;gap:6px;background:var(--surface);border:1px solid var(--line-soft);
+    border-radius:999px;padding:7px 13px;font-size:12px;color:var(--ink-3);
+  }
+  .rate b{color:var(--ink);font-weight:600;font-variant-numeric:tabular-nums}
+  .rate .live{width:6px;height:6px;border-radius:50%;background:var(--accent);align-self:center;animation:blink 2.4s infinite}
+  @keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+
+  /* ===== cartão principal ===== */
   .card{
-    width:480px;max-width:100%;border-radius:24px;padding:10px;
-    background:linear-gradient(150deg, rgba(255,255,255,.09), rgba(255,255,255,.03) 45%, rgba(124,92,255,.06));
-    border:1px solid var(--line);
-    box-shadow:0 8px 36px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.18), 0 0 80px -14px rgba(124,92,255,.5);
-    backdrop-filter:blur(22px) saturate(1.5);-webkit-backdrop-filter:blur(22px) saturate(1.5);
+    background:var(--surface);border:1px solid var(--line-soft);border-radius:var(--r-lg);
+    box-shadow:var(--shadow-card);padding:22px;
   }
-  .tabs{display:flex;gap:6px;background:rgba(0,0,0,.28);border:1px solid var(--line-soft);border-radius:16px;padding:5px;margin-bottom:12px}
+
+  /* ===== tabs: segmented control quiet ===== */
+  .tabs{display:flex;gap:2px;background:var(--well);border-radius:11px;padding:3px;margin-bottom:22px}
   .tabs button{
-    flex:1;border:0;background:transparent;color:var(--dim);font:600 12.5px system-ui;
-    padding:9px 4px;border-radius:11px;cursor:pointer;white-space:nowrap;transition:all .15s;
+    flex:1;border:0;background:transparent;color:var(--ink-3);font:600 12.5px "Figtree",system-ui;
+    padding:8px 4px;border-radius:8px;cursor:pointer;transition:all var(--t);white-space:nowrap;
   }
-  .tabs button:hover{color:var(--text)}
-  .tabs button.on{background:var(--chip);color:var(--text);box-shadow:0 2px 10px rgba(0,0,0,.35)}
-  .pane{padding:2px 4px 6px}
-  .netrow{display:flex;gap:8px;margin-bottom:10px}
+  .tabs button:hover{color:var(--ink-2)}
+  .tabs button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,16,20,.10)}
+
+  .pane{display:none}
+  .pane.on{display:block}
+
+  /* ===== labels e campos ===== */
+  label.lab{display:block;font-size:11px;font-weight:600;letter-spacing:.07em;text-transform:uppercase;color:var(--ink-3);margin:0 0 7px 1px}
+  .fld{margin-bottom:16px}
+  .hint{font-size:12px;color:var(--ink-3);margin-top:6px;line-height:1.5}
+  input.txt,select.sel{
+    width:100%;background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    color:var(--ink);font:500 14.5px "Figtree",system-ui;padding:12px 14px;outline:0;
+    transition:border-color var(--t), box-shadow var(--t);
+  }
+  input.txt::placeholder{color:var(--ink-4)}
+  input.txt:focus,select.sel:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+  .inrow{display:flex;gap:8px}
+  .inrow .txt{flex:1}
+  select.sel{appearance:none;cursor:pointer;padding-right:30px;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' stroke='%238a8a92' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+    background-repeat:no-repeat;background-position:right 12px center}
+  .selbox{position:relative;flex:none;width:118px}
+
+  /* ===== conversor (um número grande) ===== */
+  .conv{background:var(--well);border-radius:var(--r-md);padding:16px;margin-bottom:6px}
+  .conv .row2{display:flex;justify-content:space-between;align-items:baseline}
+  .conv input.big{
+    width:100%;background:transparent;border:0;outline:0;color:var(--ink);
+    font:700 34px/1.15 "Figtree",system-ui;letter-spacing:-.02em;font-variant-numeric:tabular-nums;padding:0;
+  }
+  .conv input.big::placeholder{color:var(--ink-4)}
+  .conv .sub{font-size:12px;color:var(--ink-3);margin-top:2px}
+  .conv .cur{font-size:12px;font-weight:700;letter-spacing:.05em;color:var(--ink-2);background:var(--surface);border:1px solid var(--line-soft);border-radius:7px;padding:4px 9px}
+  .divider{display:flex;align-items:center;gap:10px;margin:4px 0}
+  .divider::before,.divider::after{content:"";flex:1;height:1px;background:var(--line-soft)}
+  .flip{
+    width:30px;height:30px;border-radius:50%;background:var(--surface);border:1px solid var(--line);
+    color:var(--ink-2);font-size:13px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all var(--t);
+  }
+  .flip:hover{border-color:var(--ink-3);color:var(--ink)}
+
+  /* ===== seletor de rede ===== */
+  .netrow{display:flex;gap:8px;margin-bottom:16px}
   .net{
     flex:1;display:flex;align-items:center;justify-content:center;gap:8px;
-    background:var(--block);border:1.5px solid transparent;border-radius:14px;
-    color:var(--text);font:600 14px system-ui;padding:13px 8px;cursor:pointer;transition:all .15s;
+    background:var(--surface);border:1px solid var(--line);border-radius:var(--r-md);
+    color:var(--ink-2);font:600 13.5px "Figtree",system-ui;padding:11px 8px;cursor:pointer;transition:all var(--t);
   }
-  .net .dot{width:8px;height:8px;border-radius:50%;background:var(--dim2)}
-  .net.sel{border-color:var(--accent);background:rgba(124,92,255,.10)}
-  .net.sel .dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}
-  .net svg{width:18px;height:18px}
-  .limits{font-size:11.5px;color:var(--dim2);margin:-2px 2px 10px}
-  .swapbox{display:flex;gap:8px;align-items:stretch;position:relative;margin-bottom:10px}
-  .side{flex:1;background:var(--block);border:1px solid var(--line-soft);border-radius:14px;padding:11px 12px}
-  .side label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--dim);margin-bottom:6px}
-  .side label b{color:var(--green)}
-  .side input{
-    width:100%;background:transparent;border:0;outline:0;color:var(--text);
-    font:600 22px system-ui;font-variant-numeric:tabular-nums;
-  }
-  .side .sub{font-size:11px;color:var(--dim2);margin-top:4px}
-  .flip{
-    position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);
-    width:34px;height:34px;border-radius:50%;background:var(--chip);border:1px solid var(--line);
-    color:var(--text);font-size:15px;cursor:pointer;display:flex;align-items:center;justify-content:center;
-  }
-  .flip:hover{background:#343647}
-  .paywith{display:flex;gap:8px;margin-bottom:12px}
+  .net svg{width:16px;height:16px}
+  .net.sel{border-color:var(--ink);color:var(--ink);box-shadow:inset 0 0 0 1px var(--ink)}
+  .limits{font-size:11.5px;color:var(--ink-4);margin:-8px 1px 14px}
+
+  /* ===== PIX / Boleto ===== */
+  .paywith{display:flex;gap:2px;background:var(--well);border-radius:10px;padding:3px;margin-bottom:16px}
   .paywith button{
-    flex:1;border-radius:12px;border:1px solid var(--line-soft);background:var(--block);
-    color:var(--dim);font:600 13px system-ui;padding:11px;cursor:pointer;transition:all .15s;
+    flex:1;border:0;border-radius:8px;background:transparent;color:var(--ink-3);
+    font:600 13px "Figtree",system-ui;padding:8px;cursor:pointer;transition:all var(--t);
   }
-  .paywith button.on{background:rgba(34,197,94,.14);border-color:rgba(34,197,94,.4);color:#4ade80}
-  .paywith button.on.bol{background:rgba(255,158,0,.10);border-color:rgba(255,158,0,.35);color:#ffbc50}
-  .fld{margin-bottom:12px}
-  .fld label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--dim);margin-bottom:6px}
-  .fld .hint{font-size:11px;color:var(--dim2);margin-top:5px}
-  .inrow{display:flex;gap:8px}
-  input.txt{
-    flex:1;background:var(--block);border:1px solid var(--line-soft);border-radius:12px;
-    color:var(--text);font:500 14px system-ui;padding:12px 14px;outline:0;transition:border .15s;
-  }
-  input.txt:focus{border-color:var(--accent2)}
-  input.txt::placeholder{color:var(--dim2)}
-  .iconbtn{
-    width:46px;border-radius:12px;border:1px solid var(--line-soft);background:var(--block);
-    color:var(--dim);cursor:pointer;font-size:16px;display:flex;align-items:center;justify-content:center;
-  }
-  .iconbtn:hover{color:var(--text)}
+  .paywith button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(16,16,20,.10)}
+
+  /* ===== CTA ===== */
   .cta{
-    width:100%;border:0;border-radius:14px;padding:15px;cursor:pointer;
-    background:linear-gradient(180deg,#25cd63,#16a34a);color:#fff;font:700 15px system-ui;
-    box-shadow:0 6px 22px rgba(34,197,94,.28);transition:filter .15s, transform .05s;
+    width:100%;border:0;border-radius:var(--r-md);padding:14px;cursor:pointer;
+    background:var(--ink);color:#fff;font:600 14.5px "Figtree",system-ui;letter-spacing:.01em;
+    transition:background var(--t),transform 60ms;
   }
-  .cta:hover{filter:brightness(1.07)}
+  .cta:hover{background:#2a2a31}
   .cta:active{transform:translateY(1px)}
-  .cta:disabled{background:var(--chip);color:var(--dim);box-shadow:none;cursor:not-allowed}
-  .cta.orange{background:linear-gradient(180deg,#ff6b35,#f75c2a);box-shadow:0 6px 22px rgba(247,92,42,.30)}
-  .receipt{margin-top:14px;border-top:1px solid var(--line-soft);padding-top:12px}
-  .receipt label{display:block;font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--dim);margin-bottom:6px}
+  .cta:disabled{background:var(--well);color:var(--ink-4);cursor:not-allowed;transform:none}
+  .cta.accent{background:var(--accent)}
+  .cta.accent:hover{background:var(--accent-ink)}
   .btn2{
-    border-radius:12px;border:1px solid var(--line-soft);background:var(--block);color:var(--text);
-    font:600 13px system-ui;padding:0 16px;cursor:pointer;
+    border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);color:var(--ink-2);
+    font:600 12.5px "Figtree",system-ui;padding:0 14px;cursor:pointer;transition:all var(--t);height:41px;
   }
-  .btn2:hover{background:var(--chip)}
-  footer{margin-top:16px;text-align:center;font-size:11.5px;color:var(--dim2);line-height:1.7}
-  footer a{color:var(--dim);text-decoration:none}
-  footer a:hover{color:var(--text)}
-  .warn{
-    display:flex;gap:8px;align-items:flex-start;background:rgba(255,158,0,.08);
-    border:1px solid rgba(255,158,0,.25);border-radius:12px;padding:10px 12px;margin-bottom:12px;
-    font-size:12px;color:#ffd796;line-height:1.5;
+  .btn2:hover{border-color:var(--ink-3);color:var(--ink)}
+  .iconbtn{
+    width:43px;flex:none;border:1px solid var(--line);border-radius:var(--r-sm);background:var(--surface);
+    color:var(--ink-3);cursor:pointer;font-size:15px;display:flex;align-items:center;justify-content:center;transition:all var(--t);
   }
-  .warn .tag{background:#ff9e00;color:#000;font:800 10px system-ui;border-radius:6px;padding:2px 7px;flex:none;margin-top:1px}
+  .iconbtn:hover{color:var(--ink);border-color:var(--ink-3)}
+
+  /* ===== carteira ===== */
   .wallet{
-    width:100%;border:1px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;
-    background:var(--block);color:var(--text);font:600 14.5px system-ui;margin-bottom:12px;transition:all .15s;
+    width:100%;border:1px solid var(--line);border-radius:var(--r-md);padding:13px;cursor:pointer;
+    background:var(--surface);color:var(--ink);font:600 14px "Figtree",system-ui;margin-bottom:16px;transition:all var(--t);
   }
-  .wallet:hover{border-color:var(--accent2)}
-  .wallet.ok{background:rgba(34,197,94,.10);border-color:rgba(34,197,94,.4);color:#4ade80;cursor:default}
-  /* order status view */
-  .order{display:none}
-  .order.show{display:block}
-  .ostatus{display:flex;align-items:center;gap:10px;background:var(--block);border:1px solid var(--line-soft);border-radius:14px;padding:13px 14px;margin-bottom:12px}
-  .ostatus .pulse{width:10px;height:10px;border-radius:50%;background:#ff9e00;animation:pulse 1.2s infinite}
-  .ostatus.done .pulse{background:var(--green);animation:none}
-  .ostatus .t{font:600 14px system-ui}
-  .ostatus .s{font-size:11.5px;color:var(--dim)}
-  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
-  .depbox{background:#0d0f17;border:1px dashed rgba(255,255,255,.2);border-radius:14px;padding:14px;text-align:center;margin-bottom:12px}
-  .depbox .addr{font:500 12.5px ui-monospace,monospace;word-break:break-all;color:var(--text);margin:8px 0}
-  .depbox canvas{margin:6px auto;display:block;border-radius:10px;background:#fff;padding:8px}
-  .kv{display:flex;justify-content:space-between;font-size:12.5px;padding:7px 2px;border-bottom:1px solid var(--line-soft)}
-  .kv:last-child{border-bottom:0}
-  .kv span{color:var(--dim)} .kv b{font-weight:600;font-variant-numeric:tabular-nums}
-  .rcode{background:rgba(124,92,255,.12);border:1px solid rgba(124,92,255,.35);border-radius:12px;padding:12px;text-align:center;margin:12px 0}
-  .rcode b{font:700 18px ui-monospace,monospace;letter-spacing:.08em;color:#c8c2ff}
-  .rcode .s{font-size:11px;color:var(--dim);margin-top:4px}
-  .ghost{background:transparent;border:0;color:var(--dim);font:600 12.5px system-ui;cursor:pointer;margin-top:10px}
-  .ghost:hover{color:var(--text)}
-  .err{background:rgba(255,59,48,.10);border:1px solid rgba(255,59,48,.3);color:#ffb0bf;border-radius:12px;padding:10px 12px;font-size:12.5px;margin-bottom:12px;display:none}
+  .wallet:hover{border-color:var(--ink-3)}
+  .wallet.ok{border-color:var(--accent);color:var(--accent-ink);background:var(--accent-soft);cursor:default}
+
+  /* ===== aviso beta ===== */
+  .warn{
+    display:flex;gap:10px;align-items:flex-start;background:rgba(181,71,8,.06);
+    border:1px solid rgba(181,71,8,.18);border-radius:var(--r-md);padding:11px 13px;margin-bottom:16px;
+    font-size:12.5px;color:var(--warn);line-height:1.5;
+  }
+  .warn .tag{background:rgba(181,71,8,.14);color:var(--warn);font:700 10px "Figtree";letter-spacing:.06em;border-radius:5px;padding:2px 7px;flex:none;margin-top:1px}
+
+  /* ===== erro ===== */
+  .err{background:rgba(217,45,32,.06);border:1px solid rgba(217,45,32,.2);color:var(--danger);border-radius:var(--r-sm);padding:10px 12px;font-size:12.5px;margin-bottom:14px;display:none}
   .err.show{display:block}
-  .selbox{position:relative}
-  .selbox select{
-    width:100%;appearance:none;background:var(--block);border:1px solid var(--line-soft);border-radius:12px;
-    color:var(--text);font:500 14px system-ui;padding:12px 14px;outline:0;cursor:pointer;
+
+  /* ===== comprovante (seção secundária) ===== */
+  .receipt{margin-top:20px;border-top:1px solid var(--line-soft);padding-top:18px}
+  .receipt .hint{margin-top:8px}
+
+  /* ===== pedido ===== */
+  .ostatus{display:flex;align-items:center;gap:12px;background:var(--well);border-radius:var(--r-md);padding:14px;margin-bottom:16px}
+  .ostatus .pulse{width:9px;height:9px;border-radius:50%;background:var(--warn);animation:blink 1.4s infinite;flex:none}
+  .ostatus.done .pulse{background:var(--accent);animation:none}
+  .ostatus .t{font:600 14px "Figtree"}
+  .ostatus .s{font-size:12px;color:var(--ink-3);margin-top:1px}
+  .depbox{border:1px dashed var(--line);border-radius:var(--r-md);padding:16px;text-align:center;margin-bottom:14px}
+  .depbox .addr{font:500 12.5px var(--mono);word-break:break-all;color:var(--ink);margin:10px 0 12px}
+  .depbox canvas{margin:2px auto 12px;display:block;border-radius:8px}
+  .kv{display:flex;justify-content:space-between;font-size:13px;padding:8px 1px;border-bottom:1px solid var(--line-soft)}
+  .kv:last-of-type{border-bottom:0}
+  .kv span{color:var(--ink-3)} .kv b{font-weight:600;font-variant-numeric:tabular-nums}
+  .rcode{background:var(--well);border-radius:var(--r-md);padding:14px;text-align:center;margin:14px 0 4px}
+  .rcode b{font:700 17px var(--mono);letter-spacing:.06em;color:var(--ink)}
+  .rcode .s{font-size:11.5px;color:var(--ink-3);margin-top:5px}
+  .ghost{background:transparent;border:0;color:var(--ink-3);font:600 12.5px "Figtree";cursor:pointer;margin-top:12px;padding:4px 2px}
+  .ghost:hover{color:var(--ink)}
+
+  footer{margin-top:22px;text-align:center;font-size:11.5px;color:var(--ink-4);line-height:1.8}
+  footer a{color:var(--ink-3);text-decoration:none;border-bottom:1px solid var(--line)}
+  footer a:hover{color:var(--ink)}
+  .demo-note{font-size:10.5px;color:var(--ink-4);margin-top:6px}
+
+  .toast{
+    position:fixed;bottom:24px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:#fff;font:500 13px "Figtree";padding:11px 18px;border-radius:10px;
+    box-shadow:0 10px 34px rgba(16,16,20,.25);opacity:0;pointer-events:none;transition:opacity var(--t);
   }
-  .toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:#1e2033;border:1px solid var(--line);color:var(--text);font:500 13px system-ui;padding:11px 18px;border-radius:12px;box-shadow:0 8px 30px rgba(0,0,0,.5);opacity:0;pointer-events:none;transition:opacity .2s}
   .toast.show{opacity:1}
+
   @media (max-width:520px){
-    .card{width:100%}
-    header.top{width:100%}
-    .swapbox{flex-direction:column}
-    .flip{transform:translate(-50%,-50%) rotate(90deg)}
+    body{padding:22px 12px 56px}
+    .card{padding:18px 16px}
+    .conv input.big{font-size:29px}
   }
 </style>
 </head>
 <body>
+<div class="wrap">
 
 <header class="top">
-  <div class="logo">Pix<span>Cripto</span></div>
-  <div class="rate">1 USDT = <b id="rate">R$ …</b></div>
+  <div class="wordmark">Pix<em>Cripto</em></div>
+  <div class="rate"><span class="live"></span>1 USDT <b id="rate">…</b></div>
 </header>
 
 <div class="card">
   <nav class="tabs">
-    <button data-tab="direct" class="on">⚡ PIX Direto</button>
-    <button data-tab="web3">📱 PIX Web3</button>
-    <button data-tab="private">🔒 PIX Privado</button>
+    <button data-tab="direct" class="on">PIX Direto</button>
+    <button data-tab="web3">Web3</button>
+    <button data-tab="private">Privado</button>
     <button data-tab="swap">Swap</button>
   </nav>
 
-  <!-- ============ TAB: PIX DIRECT ============ -->
-  <section class="pane" id="tab-direct">
+  <!-- ============ PIX DIRECT ============ -->
+  <section class="pane on" id="tab-direct">
     <div class="netrow" id="net-direct">
       <button class="net sel" data-net="polygon">
         <svg viewBox="0 0 24 24" fill="#8247e5"><path d="M16.7 9.3c-.3-.2-.7-.2-1 0l-2.3 1.3-1.5.9-2.3 1.4c-.3.2-.7.2-1 0L6.5 11.6c-.3-.2-.5-.6-.5-.9V8.3c0-.3.2-.7.5-.9l2.2-1.3c.3-.2.7-.2 1 0l2.2 1.3c.3.2.5.6.5.9v1.5l1.5-.9V7.2c0-.3-.2-.7-.5-.9L11 4.8c-.3-.2-.7-.2-1 0L7.5 6.3c-.3.2-.5.6-.5.9v3c0 .3.2.7.5.9l2.5 1.5c.3.2.7.2 1 0l2.3-1.4 1.5-.9 2.3-1.3c.3-.2.7-.2 1 0l2.2 1.3c.3.2.5.6.5.9v2.3c0 .3-.2.7-.5.9l-2.3 1.3c-.3.2-.7.2-1 0l-2.2-1.3c-.3-.2-.5-.6-.5-.9v-1.5l-1.5.9v1.5c0 .3.2.7.5.9l2.5 1.5c.3.2.7.2 1 0l2.5-1.5c.3-.2.5-.6.5-.9v-3c0-.3-.2-.7-.5-.9l-2.4-1.5z"/></svg>
@@ -185,194 +229,160 @@
         Solana
       </button>
     </div>
-    <div class="limits">Mínimo: R$ 10,00 · Máximo: R$ 250.000,00 por transação.</div>
+    <div class="limits">Mínimo R$ 10 · máximo R$ 250.000 por transação</div>
 
-    <div class="swapbox">
-      <div class="side">
-        <label>VOCÊ ENVIA — <b>USDT</b></label>
-        <input id="send-usdt" type="text" inputmode="decimal" placeholder="0,00">
-        <div class="sub" id="net-label">rede Polygon</div>
-      </div>
-      <button class="flip" id="flip" title="Inverter">⇄</button>
-      <div class="side">
-        <label>VOCÊ RECEBE — BRL</label>
-        <input id="recv-brl" type="text" inputmode="decimal" placeholder="0,00">
-        <div class="sub">transferência PIX</div>
-      </div>
+    <div class="conv">
+      <div class="row2"><label class="lab" style="margin:0">Você envia</label><span class="cur">USDT</span></div>
+      <input class="big" id="send-usdt" type="text" inputmode="decimal" placeholder="0,00">
+      <div class="sub" id="net-label">rede Polygon</div>
+    </div>
+    <div class="divider"><button class="flip" id="flip" title="Inverter">⇅</button></div>
+    <div class="conv">
+      <div class="row2"><label class="lab" style="margin:0">Você recebe</label><span class="cur">BRL</span></div>
+      <input class="big" id="recv-brl" type="text" inputmode="decimal" placeholder="0,00">
+      <div class="sub" id="fee-note">taxa de 4% já na cotação</div>
     </div>
 
-    <div class="paywith" id="paywith-direct">
-      <button class="on" data-mode="pix">⚡ PIX</button>
-      <button data-mode="boleto" class="bol">🧾 Boleto</button>
+    <div class="paywith" id="paywith-direct" style="margin-top:16px">
+      <button class="on" data-mode="pix">PIX</button>
+      <button data-mode="boleto">Boleto</button>
     </div>
 
     <div class="fld" id="fld-pixkey">
-      <label>PARA ONDE VAI O SEU PIX?</label>
+      <label class="lab">Para onde vai o seu PIX?</label>
       <div class="inrow">
-        <input class="txt" id="pixkey" placeholder="Chave PIX (CPF, celular +55, e-mail ou aleatória)">
-        <button class="iconbtn" id="qr-scan" title="Ler QR code">📷</button>
+        <input class="txt" id="pixkey" placeholder="CPF, celular, e-mail ou chave aleatória">
+        <button class="iconbtn" id="qr-scan" title="Ler QR code">⌗</button>
       </div>
-      <div class="hint">O PIX é enviado automaticamente para essa chave após a confirmação do depósito.</div>
+      <div class="hint">O PIX é enviado automaticamente para essa chave quando o depósito confirma.</div>
     </div>
 
     <div class="fld" id="fld-boleto" style="display:none">
-      <label>LINHA DIGITÁVEL DO BOLETO</label>
+      <label class="lab">Linha digitável do boleto</label>
       <input class="txt" id="boleto-line" placeholder="00000.00000 00000.000000 00000.000000 0 00000000000000" maxlength="54">
       <div class="hint">Boletos vencidos não são aceitos. O valor é lido da própria linha.</div>
     </div>
 
     <div class="fld">
-      <label>CUPOM (OPCIONAL)</label>
+      <label class="lab">Cupom <span style="text-transform:none;font-weight:500;color:var(--ink-4)">(opcional)</span></label>
       <input class="txt" id="coupon-direct" placeholder="código do cupom">
       <div class="hint" id="coupon-hint-direct"></div>
     </div>
 
     <div class="err" id="err-direct"></div>
-    <button class="cta" id="go-direct" disabled>Continuar →</button>
+    <button class="cta" id="go-direct" disabled>Continuar</button>
 
     <div class="receipt">
-      <label>CONSULTAR COMPROVANTE — CÓDIGO DE RESGATE</label>
+      <label class="lab">Consultar comprovante</label>
       <div class="inrow">
-        <input class="txt" id="receipt-code" placeholder="PIX-XXXX-XXXX">
-        <button class="iconbtn" title="Mostrar dados sensíveis">👁</button>
-        <button class="btn2" id="receipt-check">verificar</button>
+        <input class="txt" id="receipt-code" placeholder="PIX-XXXX-XXXX" style="font-family:var(--mono);font-size:13px">
+        <button class="btn2" id="receipt-check">Verificar</button>
       </div>
       <div class="hint" id="receipt-result"></div>
     </div>
   </section>
 
-  <!-- ============ TAB: PIX WEB3 ============ -->
-  <section class="pane" id="tab-web3" style="display:none">
-    <button class="wallet" id="wallet-connect">📱 Conectar carteira</button>
+  <!-- ============ PIX WEB3 ============ -->
+  <section class="pane" id="tab-web3">
+    <button class="wallet" id="wallet-connect">Conectar carteira</button>
     <div class="netrow" id="net-web3">
       <button class="net sel" data-net="polygon">Polygon · USDT</button>
       <button class="net" data-net="solana">Solana · USDT</button>
     </div>
-    <div class="limits">Mínimo: R$ 3,00 · Máximo: R$ 250.000,00 por transação.</div>
+    <div class="limits">Mínimo R$ 3 · máximo R$ 250.000 por transação</div>
 
-    <div class="fld">
-      <label>VALOR DO PIX — VOCÊ RECEBE (R$)</label>
-      <input class="txt" id="web3-brl" type="text" inputmode="decimal" placeholder="0,00" style="font-size:20px;font-weight:600">
-      <div class="hint" id="web3-usdt-est">≈ 0,00 USDT da sua carteira</div>
+    <div class="conv">
+      <div class="row2"><label class="lab" style="margin:0">Você recebe</label><span class="cur">BRL</span></div>
+      <input class="big" id="web3-brl" type="text" inputmode="decimal" placeholder="0,00">
+      <div class="sub" id="web3-usdt-est">≈ 0,00 USDT da sua carteira</div>
     </div>
 
-    <div class="paywith" id="paywith-web3">
-      <button class="on" data-mode="pix">⚡ PIX</button>
-      <button data-mode="boleto" class="bol">🧾 Boleto</button>
+    <div class="paywith" id="paywith-web3" style="margin-top:16px">
+      <button class="on" data-mode="pix">PIX</button>
+      <button data-mode="boleto">Boleto</button>
     </div>
 
     <div class="fld">
-      <label>CHAVE PIX (CPF, CELULAR +55, E-MAIL OU ALEATÓRIA)</label>
+      <label class="lab">Chave PIX</label>
       <div class="inrow">
-        <input class="txt" id="web3-pixkey" placeholder="Chave PIX (CPF, celular +55, e-mail ou aleatória)">
-        <button class="iconbtn" title="Ler QR code">📷</button>
+        <input class="txt" id="web3-pixkey" placeholder="CPF, celular, e-mail ou chave aleatória">
+        <button class="iconbtn" title="Ler QR code">⌗</button>
       </div>
     </div>
 
     <div class="fld">
-      <label>CUPOM (OPCIONAL)</label>
+      <label class="lab">Cupom <span style="text-transform:none;font-weight:500;color:var(--ink-4)">(opcional)</span></label>
       <input class="txt" id="coupon-web3" placeholder="código do cupom">
     </div>
 
     <div class="err" id="err-web3"></div>
-    <div class="fld" style="font-size:11.5px;color:var(--dim2);line-height:1.6">
-      O seu USDT sai da sua carteira para a PixCripto e o PIX é disparado automaticamente. Se algo falhar, o USDT volta para a carteira conectada.
-    </div>
+    <div class="hint" style="margin-bottom:14px">O USDT sai da sua carteira e o PIX é disparado automaticamente. Se algo falhar, o valor volta para a carteira conectada.</div>
     <button class="cta" id="go-web3">Enviar USDT e disparar PIX</button>
-
-    <div class="receipt">
-      <label>COMPROVANTE — CÓDIGO DE RESGATE</label>
-      <div class="inrow">
-        <input class="txt" placeholder="PIX-XXXX-XXXX">
-        <button class="iconbtn" title="Mostrar dados sensíveis">👁</button>
-        <button class="btn2">verificar</button>
-      </div>
-    </div>
   </section>
 
-  <!-- ============ TAB: PRIVATE PIX ============ -->
-  <section class="pane" id="tab-private" style="display:none">
-    <div class="warn"><span class="tag">BETA</span><span>Esse recurso está em beta — use valores pequenos enquanto ajustamos.</span></div>
-    <div class="fld" style="font-size:12px;color:var(--dim)">Pague com qualquer token (escolha abaixo) — a liquidação é sempre em USDT na Polygon.</div>
+  <!-- ============ PRIVATE PIX ============ -->
+  <section class="pane" id="tab-private">
+    <div class="warn"><span class="tag">BETA</span><span>Recurso em beta — use valores pequenos enquanto ajustamos.</span></div>
+    <div class="hint" style="margin-bottom:14px">Pague com qualquer token — a liquidação é sempre em USDT na Polygon.</div>
 
-    <div class="swapbox" style="flex-direction:column">
-      <div class="side">
-        <label>PAGAR EM <span id="priv-chain">Ethereum</span></label>
-        <div class="inrow">
-          <input class="txt" id="priv-amount" value="1" inputmode="decimal" style="font-size:20px;font-weight:600">
-          <div class="selbox" style="width:120px;flex:none">
-            <select id="priv-token"><option>USDC</option><option>USDT</option><option>ETH</option><option>DAI</option></select>
-          </div>
-        </div>
+    <div class="fld">
+      <label class="lab">Você paga em</label>
+      <div class="inrow">
+        <input class="txt" id="priv-amount" value="1" inputmode="decimal" style="font-size:17px;font-weight:600">
+        <div class="selbox"><select class="sel" id="priv-token"><option>USDC</option><option>USDT</option><option>ETH</option><option>DAI</option></select></div>
       </div>
     </div>
-    <button class="cta orange" id="priv-connect" style="margin-bottom:12px">Conectar carteira</button>
+    <button class="wallet" id="priv-connect">Conectar carteira</button>
 
     <div class="fld">
-      <label>VALOR EM BRL <span style="float:right;font-weight:400">mín 10 USDT · máx R$ 10.000,00</span></label>
+      <label class="lab">Valor em BRL <span style="float:right;font-weight:500;text-transform:none;color:var(--ink-4)">mín 10 USDT · máx R$ 10.000</span></label>
       <input class="txt" id="priv-brl" value="100,00" inputmode="decimal">
     </div>
-    <button class="btn2" id="priv-calc" style="width:100%;padding:11px;margin-bottom:6px;color:#4ade80">calcular</button>
-    <div class="hint" id="priv-est" style="font-size:11.5px;color:var(--dim);margin-bottom:12px;min-height:15px"></div>
+    <button class="btn2" id="priv-calc" style="width:100%;margin-bottom:6px">Calcular</button>
+    <div class="hint" id="priv-est" style="min-height:16px;margin-bottom:12px"></div>
 
     <div class="fld">
-      <label>CHAVE PIX</label>
-      <input class="txt" id="priv-pixkey" placeholder="Chave PIX (CPF/CNPJ, celular +55, e-mail ou aleatória)">
+      <label class="lab">Chave PIX</label>
+      <input class="txt" id="priv-pixkey" placeholder="CPF/CNPJ, celular, e-mail ou chave aleatória">
     </div>
     <div class="fld">
-      <label>CUPOM (OPCIONAL)</label>
+      <label class="lab">Cupom <span style="text-transform:none;font-weight:500;color:var(--ink-4)">(opcional)</span></label>
       <input class="txt" placeholder="código do cupom">
     </div>
     <button class="cta" id="go-private">Enviar PIX</button>
-    <div class="limits" style="margin-top:8px">Limites: mínimo 10 USDT · máximo R$ 10.000,00 por transação</div>
-
-    <div class="receipt">
-      <label>CONSULTAR COMPROVANTE — CÓDIGO DE RESGATE</label>
-      <div class="inrow">
-        <input class="txt" placeholder="PIX-XXXX-XXXX">
-        <button class="iconbtn" title="Mostrar dados sensíveis">👁</button>
-        <button class="btn2">verificar</button>
-      </div>
-    </div>
   </section>
 
-  <!-- ============ TAB: SWAP ============ -->
-  <section class="pane" id="tab-swap" style="display:none">
-    <div class="side" style="margin-bottom:10px">
-      <label>SWAP</label>
-      <div class="fld" style="margin-bottom:0">
-        <label>PAGAR EM <span>Ethereum</span></label>
-        <div class="inrow">
-          <input class="txt" id="swap-amount" value="1" inputmode="decimal" style="font-size:20px;font-weight:600">
-          <div class="selbox" style="width:120px;flex:none">
-            <select id="swap-from"><option>USDC</option><option>USDT</option><option>ETH</option><option>DAI</option><option>WBTC</option></select>
-          </div>
-        </div>
-        <div class="hint" id="swap-from-usd">≈ $1.00</div>
+  <!-- ============ SWAP ============ -->
+  <section class="pane" id="tab-swap">
+    <div class="conv" style="margin-bottom:4px">
+      <div class="row2"><label class="lab" style="margin:0">Você paga</label>
+        <div class="selbox" style="width:110px"><select class="sel" id="swap-from" style="padding:6px 26px 6px 10px;font-size:12.5px"><option>USDC</option><option>USDT</option><option>ETH</option><option>DAI</option><option>WBTC</option></select></div>
       </div>
+      <input class="big" id="swap-amount" value="1" inputmode="decimal">
+      <div class="sub" id="swap-from-usd"></div>
     </div>
-    <div style="text-align:center;margin:-4px 0 6px"><button class="flip" style="position:static;transform:none" title="Inverter">↓</button></div>
-    <div class="side" style="margin-bottom:12px">
-      <label>RECEBER</label>
-      <div class="selbox">
-        <select id="swap-to"><option value="">Selecionar token</option><option>USDT</option><option>USDC</option><option>ETH</option><option>MATIC</option><option>DAI</option></select>
+    <div class="divider"><button class="flip" title="Inverter">↓</button></div>
+    <div class="conv" style="margin-bottom:16px">
+      <div class="row2"><label class="lab" style="margin:0">Você recebe</label>
+        <div class="selbox" style="width:110px"><select class="sel" id="swap-to" style="padding:6px 26px 6px 10px;font-size:12.5px"><option value="">Escolher</option><option>USDT</option><option>USDC</option><option>ETH</option><option>MATIC</option><option>DAI</option></select></div>
       </div>
-      <div class="hint" id="swap-quote"></div>
+      <div class="sub" id="swap-quote" style="margin-top:10px;font-size:13px;color:var(--ink-2)"></div>
     </div>
-    <button class="cta orange" id="swap-connect">Conectar carteira</button>
+    <button class="wallet" id="swap-connect">Conectar carteira</button>
+    <button class="cta" id="swap-go" disabled>Revisar swap</button>
   </section>
 
-  <!-- ============ ORDER VIEW (shared) ============ -->
+  <!-- ============ ORDER VIEW ============ -->
   <section class="pane order" id="order-view">
     <div class="ostatus" id="os-box">
       <div class="pulse"></div>
       <div><div class="t" id="os-title">Aguardando depósito</div><div class="s" id="os-sub">Envie o valor exato para o endereço abaixo</div></div>
     </div>
     <div class="depbox">
-      <div style="font-size:11px;color:var(--dim)">ENDEREÇO DE DEPÓSITO (<span id="os-net">Polygon</span>)</div>
+      <label class="lab" style="text-align:center">Endereço de depósito · <span id="os-net">Polygon</span></label>
       <div class="addr" id="os-addr">…</div>
       <canvas id="os-qr" width="164" height="164"></canvas>
-      <button class="btn2" id="os-copy" style="padding:9px 18px">copiar endereço</button>
+      <button class="btn2" id="os-copy" style="height:36px">Copiar endereço</button>
     </div>
     <div class="kv"><span>Você envia</span><b id="os-send">—</b></div>
     <div class="kv"><span>Você recebe</span><b id="os-recv">—</b></div>
@@ -380,20 +390,21 @@
     <div class="kv"><span>Taxa</span><b id="os-fee">—</b></div>
     <div class="kv"><span>Destino PIX</span><b id="os-dest">—</b></div>
     <div class="rcode">
-      <div style="font-size:10.5px;color:var(--dim);margin-bottom:4px">SEU CÓDIGO DE RESGATE</div>
+      <label class="lab" style="text-align:center;margin-bottom:5px">Seu código de resgate</label>
       <b id="os-code">PIX-0000-0000</b>
       <div class="s">Guarde esse código. É ele que comprova e recupera a sua operação.</div>
     </div>
-    <button class="ghost" id="os-back">← nova operação</button>
+    <button class="ghost" id="os-back">← Nova operação</button>
   </section>
 </div>
 
 <footer>
-  PixCripto — Swaps rápidos e baratos, cross-chain — 2026<br>
-  <a href="#" id="support-link">Falar com suporte</a> · <a href="#" id="tg-link">Grupo no Telegram</a><br>
-  <span style="font-size:10.5px">Ambiente de demonstração. Nenhuma operação real é executada sem integração de pagamentos ativa.</span>
+  PixCripto — swaps rápidos e baratos, cross-chain · 2026<br>
+  <a href="#" id="support-link">Falar com suporte</a> &nbsp;·&nbsp; <a href="#" id="tg-link">Grupo no Telegram</a>
+  <div class="demo-note">Ambiente de demonstração. Nenhuma operação real é executada sem a integração de pagamentos ativa.</div>
 </footer>
 
+</div>
 <div class="toast" id="toast"></div>
 
 <script src="https://cdn.jsdelivr.net/npm/qrcode@1.5.3/build/qrcode.min.js"></script>
@@ -405,7 +416,7 @@ const BRL = new Intl.NumberFormat('pt-BR',{style:'currency',currency:'BRL'});
 const num = s => parseFloat(String(s).replace(/\./g,'').replace(',','.').replace(/[^\d.]/g,''))||0;
 const fmt = n => n.toLocaleString('pt-BR',{minimumFractionDigits:2,maximumFractionDigits:2});
 
-const state = { rate:null, feePct:4, net:'polygon', dir:'send', couponPct:null };
+const state = { rate:null, feePct:4, net:'polygon', couponPct:null };
 
 /* ---------- live rate ---------- */
 async function loadRate(){
@@ -413,10 +424,10 @@ async function loadRate(){
     const r = await fetch('/api/quote'); const j = await r.json();
     state.rate = j.brl;
   }catch(e){ state.rate = null; }
-  $('#rate').textContent = state.rate ? 'R$ '+fmt(state.rate) : 'indisponível';
+  $('#rate').textContent = state.rate ? '= R$ '+fmt(state.rate) : 'indisponível';
   recalc();
 }
-function effRate(){ // fee embedded in rate
+function effRate(){
   const pct = state.couponPct ?? state.feePct;
   return state.rate ? state.rate * (1 - pct/100) : null;
 }
@@ -432,6 +443,7 @@ function recalc(){
     const b = num($('#recv-brl').value);
     $('#send-usdt').value = b? fmt(b/r) : '';
   }
+  $('#fee-note').textContent = 'taxa de '+(state.couponPct ?? state.feePct)+'% já na cotação';
   validate();
 }
 $('#send-usdt').addEventListener('input',()=>{editing='send';recalc();});
@@ -442,8 +454,8 @@ $('#flip').addEventListener('click',()=>{ editing = editing==='send'?'recv':'sen
 /* ---------- tabs ---------- */
 $$('.tabs button').forEach(b=>b.addEventListener('click',()=>{
   $$('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
-  $$('.pane').forEach(p=>p.style.display='none');
-  $('#tab-'+b.dataset.tab).style.display='block';
+  $$('.pane').forEach(p=>p.classList.remove('on'));
+  $('#tab-'+b.dataset.tab).classList.add('on');
 }));
 
 /* ---------- networks ---------- */
@@ -456,8 +468,8 @@ $$('.netrow').forEach(row=>row.addEventListener('click',e=>{
 /* ---------- pay with ---------- */
 $$('.paywith').forEach(pw=>pw.addEventListener('click',e=>{
   const btn=e.target.closest('button'); if(!btn)return;
-  pw.querySelectorAll('button').forEach(x=>x.classList.remove('on','bol'));
-  btn.classList.add('on'); if(btn.dataset.mode==='boleto')btn.classList.add('bol');
+  pw.querySelectorAll('button').forEach(x=>x.classList.remove('on'));
+  btn.classList.add('on');
   if(pw.id==='paywith-direct'){
     $('#fld-pixkey').style.display = btn.dataset.mode==='pix'?'block':'none';
     $('#fld-boleto').style.display = btn.dataset.mode==='boleto'?'block':'none';
@@ -468,12 +480,12 @@ $$('.paywith').forEach(pw=>pw.addEventListener('click',e=>{
 /* ---------- PIX key validation ---------- */
 function pixKeyOk(v){
   v=v.trim(); if(!v) return false;
-  if(/^\d{11}$/.test(v)) return true;                       // CPF
-  if(/^\d{14}$/.test(v)) return true;                       // CNPJ
-  if(/^\+?55?\d{10,11}$/.test(v.replace(/\D/g,'')) && /\d{10,13}$/.test(v.replace(/\D/g,''))) return true; // phone
-  if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return true;     // email
-  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return true; // EVP
-  return v.length>=32;                                       // random key fallback
+  if(/^\d{11}$/.test(v)) return true;
+  if(/^\d{14}$/.test(v)) return true;
+  if(/^\+?55?\d{10,11}$/.test(v.replace(/\D/g,'')) && /\d{10,13}$/.test(v.replace(/\D/g,''))) return true;
+  if(/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) return true;
+  if(/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(v)) return true;
+  return v.length>=32;
 }
 function modeDirect(){ return $('#paywith-direct .on').dataset.mode; }
 
@@ -482,7 +494,7 @@ $('#coupon-direct').addEventListener('input', e=>{
   const c=e.target.value.trim().toUpperCase();
   const map={PRIMEIRO:2, ACADEME:2, PIXCRIPTO2:2};
   if(!c){ state.couponPct=null; $('#coupon-hint-direct').textContent=''; }
-  else if(map[c]){ state.couponPct=map[c]; $('#coupon-hint-direct').textContent='✓ Cupom aplicado: taxa reduzida para '+map[c]+'%'; }
+  else if(map[c]){ state.couponPct=map[c]; $('#coupon-hint-direct').textContent='Cupom aplicado: taxa reduzida para '+map[c]+'%'; }
   else { state.couponPct=null; $('#coupon-hint-direct').textContent='Cupom não encontrado.'; }
   recalc();
 });
@@ -494,9 +506,8 @@ function validate(){
   let msg='';
   if(!r) msg='Cotação indisponível no momento. Tente de novo em instantes.';
   else if(!brl||!usdt) msg='';
-  else if(brl<10) msg='O mínimo é R$ 10,00 por transação.';
-  else if(brl>250000) msg='O máximo é R$ 250.000,00 por transação.';
-  else if(modeDirect()==='pix' && !pixKeyOk($('#pixkey').value)) msg='';
+  else if(brl<10) msg='O mínimo é R$ 10 por transação.';
+  else if(brl>250000) msg='O máximo é R$ 250.000 por transação.';
   $('#go-direct').disabled = !r || !brl || brl<10 || brl>250000 ||
     (modeDirect()==='pix' ? !pixKeyOk($('#pixkey').value) : $('#boleto-line').value.replace(/\D/g,'').length<47);
   if(msg){ err.textContent=msg; err.classList.add('show'); }
@@ -534,11 +545,12 @@ $('#go-direct').addEventListener('click', async ()=>{
     localStorage.setItem('pixcripto_orders',JSON.stringify(store));
     showOrder(currentOrder);
   }catch(e){ toast(e.message); }
-  $('#go-direct').disabled=false; $('#go-direct').textContent='Continuar →';
+  $('#go-direct').disabled=false; $('#go-direct').textContent='Continuar';
 });
 
 function showOrder(o){
-  $$('.pane').forEach(p=>{p.style.display='none'}); $('#order-view').classList.add('show'); $('#order-view').style.display='block';
+  $$('.pane').forEach(p=>p.classList.remove('on'));
+  $('#order-view').classList.add('on');
   $('#os-net').textContent = o.net==='polygon'?'Polygon':'Solana';
   $('#os-addr').textContent = o.depositAddress;
   $('#os-send').textContent = fmt(o.usdt)+' USDT';
@@ -569,15 +581,15 @@ function setStatus(st){
     WAITING_DEPOSIT:['Aguardando depósito','Envie o valor exato para o endereço abaixo',false],
     CONFIRMING:['Depósito detectado','Confirmando na blockchain…',false],
     PROCESSING:['Enviando seu PIX','O PIX está sendo disparado para a chave informada',false],
-    PAID:['PIX enviado ✓','O comprovante fica disponível pelo código de resgate',true],
+    PAID:['PIX enviado','O comprovante fica disponível pelo código de resgate',true],
     FAILED:['Operação não concluída','O valor enviado é devolvido para a carteira de origem',true],
   };
   const [t,s,done]=map[st]||map.WAITING_DEPOSIT;
   $('#os-title').textContent=t; $('#os-sub').textContent=s; box.classList.toggle('done',done);
 }
 $('#os-back').addEventListener('click',()=>{
-  clearInterval(poller); $('#order-view').classList.remove('show'); $('#order-view').style.display='none';
-  $('#tab-direct').style.display='block';
+  clearInterval(poller); $('#order-view').classList.remove('on');
+  $('#tab-direct').classList.add('on');
   $$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab==='direct'));
 });
 $('#os-copy').addEventListener('click',()=>{ navigator.clipboard.writeText($('#os-addr').textContent).then(()=>toast('Endereço copiado')); });
@@ -589,11 +601,11 @@ $('#receipt-check').addEventListener('click', async ()=>{
   if(!/^PIX-[0-9A-F]{4}-[0-9A-F]{4}$/.test(code)){ out.textContent='Formato esperado: PIX-XXXX-XXXX'; return; }
   try{
     const r=await fetch('/api/receipt?code='+encodeURIComponent(code)); const j=await r.json();
-    if(j.found){ out.innerHTML=`✓ ${j.statusLabel} — ${j.brl} para ${j.dest} · ${j.when}`; return; }
+    if(j.found){ out.innerHTML=`${j.statusLabel} — ${j.brl} para ${j.dest} · ${j.when}`; return; }
   }catch(e){}
   const store=JSON.parse(localStorage.getItem('pixcripto_orders')||'{}');
   const o=store[code];
-  out.textContent = o ? `✓ Registrada neste navegador — ${BRL.format(o.brl)} para ${o.pixKey||'boleto'}` : 'Nenhuma operação encontrada com esse código.';
+  out.textContent = o ? `Registrada neste navegador — ${BRL.format(o.brl)} para ${o.pixKey||'boleto'}` : 'Nenhuma operação encontrada com esse código.';
 });
 
 /* ---------- carteira (web3 / privado / swap) ---------- */
@@ -601,20 +613,22 @@ async function connectWallet(btn){
   if(!window.ethereum){ toast('Nenhuma carteira encontrada. Instale a MetaMask ou use o PIX Direto.'); return; }
   try{
     const acc = await window.ethereum.request({method:'eth_requestAccounts'});
-    btn.classList.add('ok'); btn.textContent='✓ '+acc[0].slice(0,6)+'…'+acc[0].slice(-4);
+    btn.classList.add('ok'); btn.textContent='Carteira '+acc[0].slice(0,6)+'…'+acc[0].slice(-4);
   }catch(e){ toast('Conexão recusada.'); }
 }
 $('#wallet-connect').addEventListener('click',()=>connectWallet($('#wallet-connect')));
 $('#priv-connect').addEventListener('click',()=>connectWallet($('#priv-connect')));
 $('#swap-connect').addEventListener('click',()=>connectWallet($('#swap-connect')));
+
+/* ---------- web3 tab ---------- */
 $('#web3-brl').addEventListener('input',()=>{
   const r=effRate(); const b=num($('#web3-brl').value);
   $('#web3-usdt-est').textContent = r&&b ? '≈ '+fmt(b/r)+' USDT da sua carteira' : '≈ 0,00 USDT da sua carteira';
 });
 $('#go-web3').addEventListener('click',()=>{
   const w=$('#wallet-connect');
-  if(!w.classList.contains('ok')){ toast('Conecte a carteira primeiro — ou use a aba PIX Direto, que não precisa de carteira.'); return; }
-  toast('Integração Web3 de envio direto entra com a conta de pagamentos ativa. Use o PIX Direto por enquanto.');
+  if(!w.classList.contains('ok')){ toast('Conecte a carteira primeiro — ou use o PIX Direto, que não precisa de carteira.'); return; }
+  toast('O envio direto pela carteira ativa com a integração de pagamentos. Use o PIX Direto por enquanto.');
 });
 
 /* ---------- cotação real de swap (KyberSwap via /api/swap-quote) ---------- */
@@ -629,29 +643,35 @@ function scheduleSwapQuote(){
   quoteTimer=setTimeout(async ()=>{
     const from=$('#swap-from').value, to=$('#swap-to').value, amt=num($('#swap-amount').value);
     const out=$('#swap-quote');
-    if(!to){ out.textContent=''; return; }
+    if(!to){ out.textContent=''; $('#swap-go').disabled=true; return; }
     if(!amt){ out.textContent='Informe o valor.'; return; }
-    out.textContent='cotando…';
+    out.textContent='Cotando…';
     try{
       const q=await fetchQuote(from,to,amt);
-      out.textContent=`≈ ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${to} · $${q.amountOutUsd?.toFixed(2)} · gás ~$${q.gasUsd?.toFixed(2)}`;
-    }catch(e){ out.textContent='Cotação indisponível agora.'; }
+      out.textContent=`≈ ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${to} · US$ ${q.amountOutUsd?.toFixed(2)} · gás ~US$ ${q.gasUsd?.toFixed(2)}`;
+      $('#swap-go').disabled=false;
+    }catch(e){ out.textContent='Cotação indisponível agora.'; $('#swap-go').disabled=true; }
   },450);
 }
 ['#swap-amount','#swap-from','#swap-to'].forEach(s=>$(s).addEventListener('input',scheduleSwapQuote));
 $('#swap-to').addEventListener('change',scheduleSwapQuote);
+$('#swap-go').addEventListener('click',()=>{
+  const w=$('#swap-connect');
+  if(!w.classList.contains('ok')){ toast('Conecte a carteira para assinar o swap.'); return; }
+  toast('A execução do swap ativa junto com a integração de pagamentos.');
+});
 $('#priv-calc').addEventListener('click',async ()=>{
   const est=$('#priv-est');
   const token=$('#priv-token').value, brl=num($('#priv-brl').value);
   const r=effRate();
   if(!r||!brl){ est.textContent='Informe o valor em BRL.'; return; }
-  est.textContent='calculando…';
+  est.textContent='Calculando…';
   const usdtNeeded=brl/r;
-  if(token==='USDT'){ est.textContent=`≈ ${fmt(usdtNeeded)} USDT necessários para ${BRL.format(brl)}`; return; }
+  if(token==='USDT'){ est.textContent=`≈ ${fmt(usdtNeeded)} USDT necessários para ${BRL.format(brl)}.`; return; }
   try{
     const q=await fetchQuote(token,'USDT',(usdtNeeded*1.005).toFixed(6));
-    est.textContent=`≈ ${q.amountIn.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${token} → ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:4})} USDT → ${BRL.format(brl)} (cotação real, via KyberSwap)`;
-  }catch(e){ est.textContent=`≈ ${fmt(usdtNeeded)} USDT equivalentes (cotação do token indisponível)`; }
+    est.textContent=`≈ ${q.amountIn.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${token} → ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:4})} USDT → ${BRL.format(brl)} (cotação real, via KyberSwap).`;
+  }catch(e){ est.textContent=`≈ ${fmt(usdtNeeded)} USDT equivalentes (cotação do token indisponível).`; }
 });
 $('#go-private').addEventListener('click',()=>toast('Modo privado em beta: use o PIX Direto por enquanto.'));
 
