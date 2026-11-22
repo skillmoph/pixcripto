@@ -312,7 +312,8 @@
       <label>VALOR EM BRL <span style="float:right;font-weight:400">mín 10 USDT · máx R$ 10.000,00</span></label>
       <input class="txt" id="priv-brl" value="100,00" inputmode="decimal">
     </div>
-    <button class="btn2" id="priv-calc" style="width:100%;padding:11px;margin-bottom:12px;color:#4ade80">calcular</button>
+    <button class="btn2" id="priv-calc" style="width:100%;padding:11px;margin-bottom:6px;color:#4ade80">calcular</button>
+    <div class="hint" id="priv-est" style="font-size:11.5px;color:var(--dim);margin-bottom:12px;min-height:15px"></div>
 
     <div class="fld">
       <label>CHAVE PIX</label>
@@ -595,14 +596,17 @@ $('#receipt-check').addEventListener('click', async ()=>{
   out.textContent = o ? `✓ Registrada neste navegador — ${BRL.format(o.brl)} para ${o.pixKey||'boleto'}` : 'Nenhuma operação encontrada com esse código.';
 });
 
-/* ---------- web3 tab ---------- */
-$('#wallet-connect').addEventListener('click', async ()=>{
-  if(!window.ethereum){ toast('Nenhuma carteira encontrada. Instale MetaMask ou use o PIX Direto.'); return; }
+/* ---------- carteira (web3 / privado / swap) ---------- */
+async function connectWallet(btn){
+  if(!window.ethereum){ toast('Nenhuma carteira encontrada. Instale a MetaMask ou use o PIX Direto.'); return; }
   try{
     const acc = await window.ethereum.request({method:'eth_requestAccounts'});
-    const b=$('#wallet-connect'); b.classList.add('ok'); b.textContent='✓ '+acc[0].slice(0,6)+'…'+acc[0].slice(-4);
+    btn.classList.add('ok'); btn.textContent='✓ '+acc[0].slice(0,6)+'…'+acc[0].slice(-4);
   }catch(e){ toast('Conexão recusada.'); }
-});
+}
+$('#wallet-connect').addEventListener('click',()=>connectWallet($('#wallet-connect')));
+$('#priv-connect').addEventListener('click',()=>connectWallet($('#priv-connect')));
+$('#swap-connect').addEventListener('click',()=>connectWallet($('#swap-connect')));
 $('#web3-brl').addEventListener('input',()=>{
   const r=effRate(); const b=num($('#web3-brl').value);
   $('#web3-usdt-est').textContent = r&&b ? '≈ '+fmt(b/r)+' USDT da sua carteira' : '≈ 0,00 USDT da sua carteira';
@@ -613,18 +617,43 @@ $('#go-web3').addEventListener('click',()=>{
   toast('Integração Web3 de envio direto entra com a conta de pagamentos ativa. Use o PIX Direto por enquanto.');
 });
 
-/* ---------- private / swap tabs ---------- */
-$('#priv-connect').addEventListener('click',()=>toast('Conexão de carteira do modo privado chega com a integração de pagamentos.'));
-$('#swap-connect').addEventListener('click',()=>toast('Conexão de carteira do swap chega com a integração de pagamentos.'));
-$('#priv-calc').addEventListener('click',()=>{
-  const r=effRate(); const b=num($('#priv-brl').value);
-  toast(r&&b ? 'Estimativa: '+fmt(b/r)+' USDT equivalentes' : 'Cotação indisponível');
+/* ---------- cotação real de swap (KyberSwap via /api/swap-quote) ---------- */
+let quoteTimer=null;
+async function fetchQuote(from,to,amount){
+  const r=await fetch(`/api/swap-quote?from=${from}&to=${to}&amount=${amount}`);
+  if(!r.ok) throw new Error('quote');
+  return r.json();
+}
+function scheduleSwapQuote(){
+  clearTimeout(quoteTimer);
+  quoteTimer=setTimeout(async ()=>{
+    const from=$('#swap-from').value, to=$('#swap-to').value, amt=num($('#swap-amount').value);
+    const out=$('#swap-quote');
+    if(!to){ out.textContent=''; return; }
+    if(!amt){ out.textContent='Informe o valor.'; return; }
+    out.textContent='cotando…';
+    try{
+      const q=await fetchQuote(from,to,amt);
+      out.textContent=`≈ ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${to} · $${q.amountOutUsd?.toFixed(2)} · gás ~$${q.gasUsd?.toFixed(2)}`;
+    }catch(e){ out.textContent='Cotação indisponível agora.'; }
+  },450);
+}
+['#swap-amount','#swap-from','#swap-to'].forEach(s=>$(s).addEventListener('input',scheduleSwapQuote));
+$('#swap-to').addEventListener('change',scheduleSwapQuote);
+$('#priv-calc').addEventListener('click',async ()=>{
+  const est=$('#priv-est');
+  const token=$('#priv-token').value, brl=num($('#priv-brl').value);
+  const r=effRate();
+  if(!r||!brl){ est.textContent='Informe o valor em BRL.'; return; }
+  est.textContent='calculando…';
+  const usdtNeeded=brl/r;
+  if(token==='USDT'){ est.textContent=`≈ ${fmt(usdtNeeded)} USDT necessários para ${BRL.format(brl)}`; return; }
+  try{
+    const q=await fetchQuote(token,'USDT',(usdtNeeded*1.005).toFixed(6));
+    est.textContent=`≈ ${q.amountIn.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${token} → ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:4})} USDT → ${BRL.format(brl)} (cotação real, via KyberSwap)`;
+  }catch(e){ est.textContent=`≈ ${fmt(usdtNeeded)} USDT equivalentes (cotação do token indisponível)`; }
 });
 $('#go-private').addEventListener('click',()=>toast('Modo privado em beta: use o PIX Direto por enquanto.'));
-$('#swap-to').addEventListener('change',()=>{
-  const t=$('#swap-to').value;
-  $('#swap-quote').textContent = t ? 'Cotação ao vivo chega com a integração de swap (mesma infra de pagamentos).' : '';
-});
 
 /* ---------- misc ---------- */
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),3200); }
