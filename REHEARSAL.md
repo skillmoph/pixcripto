@@ -14,7 +14,17 @@ Padrão de UI: skill Stageshow (delegação do main em 22/11/2026, repassando pe
 - Mobile (390x844): layout empilha, conversor ao vivo 20 USDT → 114,05, CTA habilita após chave válida. ✓
 - QR: biblioteca vendorizada em /assets/qrcode.min.js (bundle esbuild do pacote qrcode@1.5.3) — sem dependência de CDN. No dark o QR fica em tile claro (escaneável). ✓
 
+## Backend real (22/11/2026 17:42, verificado em produção via curl)
+- api/order.js (Polygon): endereço de depósito REAL derivado da carteira HD (BIP44 m/44'/60'/0'/0, índice = HMAC(segredo, código) mod 2^31). Mnemonic SÓ no cofre; Vercel tem só xpub + segredo HMAC. ✓
+- Token de pedido assinado (HMAC-SHA256, timingSafeEqual); adulterado → 401. ✓
+- api/order-status.js?token: lê balanceOf do USDT oficial (0xc2132D05...8E8F) via RPC público (publicnode, fallback drpc). Produção: pedido PIX-T3ST-0001 → endereço real, balance 0, expected 20, WAITING_DEPOSIT. ✓
+- Solana: segue em demonstração (sem carteira Solana).
+- Rodapé atualizado: "Recebimento USDT on-chain ativo (rede Polygon)."
+
 ## O que não foi checado / limites conhecidos
 - Gate animado (film.mjs --gate) não se aplica: app de produção, não demo ilustrativa.
-- Pagamento PIX real depende do WOOVI_APP_ID (conta em criação pelo agente irmão); até lá, api/order.js roda em modo demonstração (declarado no rodapé do app).
+- Depósito real de teste (com fundos do André) ainda não feito: o caminho do RPC foi validado com saldo zero.
+- Repasse PIX depende do WOOVI_APP_ID (agente irmão criando a conta); ao confirmar depósito o status para em CONFIRMED_ONCHAIN ("aguardando ativação do repasse").
+- Sweep dos USDT acumulados exige o mnemonic (cofre) — operação de tesouraria a construir depois, com ordem do André.
+- Confirmação de bloco: v1 lê "latest" sem profundidade de confirmações.
 - Transação on-chain real das abas Web3/Privado/Swap depende do parceiro de liquidez.
