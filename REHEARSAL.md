@@ -1,18 +1,19 @@
-# REHEARSAL — PixCripto (clone NakSwap)
+# REHEARSAL — PixCripto (funcionalidades do NakSwap, identidade própria)
 
-Padrão: skill Stageshow (regra do André, 22/11/2026) aplicada como padrão de design de UI.
+Padrão de UI: skill Stageshow (delegação do main em 22/11/2026, repassando pedido do André). Redesign v2 com identidade própria (não é cópia visual do NakSwap).
 
 ## Base
-- Original mapeado no navegador de nuvem (22/11/2026): 4 abas (PIX Direct, PIX Web3, Private PIX, Swap), tokens extraídos do CSS publicado do site (fundo #0a0a0f, cartão vidro 24px com glow violeta, acento #7c5cff, verde PIX #22c55e, laranja conectar #f75c2a, system-ui).
-- Prints do original e do clone comparados lado a lado; hierarquia: logo + cotação → tabs → rede → valores → destino → CTA → comprovante.
+- Funcionalidades mapeadas do original no navegador de nuvem (22/11/2026): 4 abas (PIX Direto, Web3, Privado, Swap), rede Polygon/Solana, PIX/Boleto, chave PIX, cupom, comprovante.
+- v2 (redesign): tema claro neutro quente, acento teal #0c8f7d, Figtree, abas segmentadas, conversor com valor grande, zero emoji como ícone. Decisão: André pediu "extremamente elegante e premium e minimalista" (22/11/2026 17:22).
 
-## Verificado com prints reais do link público (página recarregada)
-- Tela principal: tabs, seletor Polygon/Solana, campos envia/recebe, PIX/Boleto, chave PIX, cupom, CTA desabilitado até validar, consulta de comprovante. ✓
-- Fluxo de ponta a ponta: 20 USDT → R$ 114,05 (cotação com taxa), operação criada, endereço de depósito + QR, código PIX-69C7-72E1, tela de status. ✓
-- Cotação ao vivo no topo (API pública). ✓
-- Mobile: layout empilha (media query 520px) — verificado por CSS, print mobile pendente.
+## Verificado com prints reais do link público (página recarregada, 22/11/2026)
+- Tela principal desktop: logo + cotação ao vivo, 4 abas, seletor de rede, conversor, PIX/Boleto, chave, cupom, CTA. ✓
+- Fluxo ponta a ponta desktop: 20 USDT → R$ 114,05, pedido criado (PIX-D55D-D90C), endereço de depósito + QR renderizado, código de resgate, progressão de status. ✓
+- Aba Swap: cotação real via KyberSwap (1 USDC → ≈ 1,001203 USDT, gás ~US$ 0,06). ✓
+- Mobile (390x844): layout empilha, conversor ao vivo 20 USDT → 114,05, CTA habilita após chave válida. ✓
+- QR: biblioteca vendorizada em /assets/qrcode.min.js (bundle esbuild do pacote qrcode@1.5.3) — sem dependência de CDN. ✓
 
 ## O que não foi checado / limites conhecidos
 - Gate animado (film.mjs --gate) não se aplica: app de produção, não demo ilustrativa.
-- Abas Web3/Privado/Swap: UI pronta; transação real depende da integração de pagamentos (Woovi) e do parceiro de liquidez.
-- QR do depósito depende de CDN (jsdelivr); se o CDN falhar, o QR some e o endereço em texto permanece.
+- Pagamento PIX real depende do WOOVI_APP_ID (conta em criação pelo agente irmão); até lá, api/order.js roda em modo demonstração (declarado no rodapé do app).
+- Transação on-chain real das abas Web3/Privado/Swap depende do parceiro de liquidez.
