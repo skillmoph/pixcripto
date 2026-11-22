@@ -381,7 +381,7 @@
       <label class="lab">Você paga em</label>
       <div class="inrow">
         <input class="txt" id="priv-amount" value="1" inputmode="decimal" style="font-size:17px;font-weight:600">
-        <div class="selbox"><select class="sel" id="priv-token"><option>USDT</option></select></div>
+        <div class="selbox"><select class="sel" id="priv-token"><option>USDT</option><option>USDC</option><option>ETH</option><option>DAI</option><option>WBTC</option><option>MATIC</option></select></div>
       </div>
     </div>
 
@@ -401,6 +401,8 @@
       <input class="txt" placeholder="código do cupom">
     </div>
     <button class="cta" id="go-private">Enviar PIX</button>
+    <button class="btn2" id="priv-connect" style="width:100%;margin-top:8px;display:none">Conectar carteira para pagar com o token</button>
+    <div class="hint" id="priv-wallethint" style="display:none;margin-top:8px">Com outro token, a conversão para USDT acontece na sua carteira (rede Polygon, via LI.FI) e cai direto no endereço da operação. Gás e taxas saem do seu valor.</div>
   </section>
 
   <!-- ============ SWAP ============ -->
@@ -538,11 +540,12 @@ $('#flip').addEventListener('click',()=>{ editing = editing==='send'?'recv':'sen
   const a=$('#send-usdt').value; $('#send-usdt').value=$('#recv-brl').value; $('#recv-brl').value=a; recalc(); toast('Ordem de preenchimento invertida'); });
 
 /* ---------- tabs ---------- */
-$$('.tabs button').forEach(b=>b.addEventListener('click',()=>{
-  $$('.tabs button').forEach(x=>x.classList.toggle('on',x===b));
+function switchTab(tab){
+  $$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab===tab));
   $$('.pane').forEach(p=>p.classList.remove('on'));
-  $('#tab-'+b.dataset.tab).classList.add('on');
-}));
+  const p=$('#tab-'+tab); if(p) p.classList.add('on');
+}
+$$('.tabs button').forEach(b=>b.addEventListener('click',()=>switchTab(b.dataset.tab)));
 
 /* ---------- networks ---------- */
 $$('.netrow').forEach(row=>row.addEventListener('click',e=>{
@@ -726,8 +729,23 @@ $('#web3-brl').addEventListener('input',()=>{
 $('#go-web3').addEventListener('click',()=>{
   placeOrderFromFields($('#go-web3'), num($('#web3-brl').value), $('#web3-pixkey').value.trim(), $('#coupon-web3').value.trim().toUpperCase());
 });
-$('#go-private').addEventListener('click',()=>{
-  placeOrderFromFields($('#go-private'), num($('#priv-brl').value), $('#priv-pixkey').value.trim(), null);
+function updatePrivWalletUI(){
+  const t=$('#priv-token').value;
+  const other=t!=='USDT';
+  $('#priv-connect').style.display = other && !window._walletAccount ? '' : 'none';
+  $('#priv-wallethint').style.display = other ? '' : 'none';
+}
+$('#priv-token').addEventListener('change',updatePrivWalletUI);
+$('#priv-connect').addEventListener('click',async ()=>{ await connectWalletOptional($('#priv-connect')); updatePrivWalletUI(); });
+$('#go-private').addEventListener('click',async ()=>{
+  const token=$('#priv-token').value;
+  const brl=num($('#priv-brl').value), key=$('#priv-pixkey').value.trim();
+  await placeOrderFromFields($('#go-private'), brl, key, null);
+  if(token==='USDT') return;
+  const o=currentOrder;
+  if(!o||!o.depositAddress||o.pixKey!==key) return; // pedido não foi criado (validação falhou)
+  if(!window._walletAccount){ toast('Operação criada. Para pagar com '+token+', conecte a carteira na aba Privado.'); switchTab('private'); updatePrivWalletUI(); return; }
+  executePrivateSwap(o, token, num($('#priv-amount').value));
 });
 
 /* ---------- carteira OPCIONAL (web3 / swap) — nunca bloqueia nem erra ---------- */
@@ -836,6 +854,41 @@ $('#priv-calc').addEventListener('click',async ()=>{
     est.textContent=`≈ ${q.amountIn.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${token} → ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:4})} USDT → ${BRL.format(brl)} (cotação real, via KyberSwap).`;
   }catch(e){ est.textContent=`≈ ${fmt(usdtNeeded)} USDT equivalentes (cotação do token indisponível).`; }
 });
+
+/* ---------- privado REAL: paga com outro token, USDT cai no endereço do pedido ---------- */
+async function executePrivateSwap(order, token, amt){
+  if(!amt||amt<=0){ toast('Informe quanto de '+token+' você quer pagar no campo "Você paga em".'); return; }
+  const acc=window._walletAccount;
+  toast('Preparando conversão '+token+' → USDT…');
+  try{
+    const cur=await ethereum.request({method:'eth_chainId'});
+    if(cur!==POLY_CHAIN){
+      try{ await ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:POLY_CHAIN}]}); }
+      catch(sw){
+        if(sw&&sw.code===4902){
+          await ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:POLY_CHAIN,chainName:'Polygon Mainnet',nativeCurrency:{name:'POL',symbol:'POL',decimals:18},rpcUrls:['https://polygon-bor-rpc.publicnode.com'],blockExplorerUrls:['https://polygonscan.com']}]});
+        } else throw sw;
+      }
+    }
+    const r=await fetch(`/api/swap-quote?from=${token}&to=USDT&amount=${amt}&fromAddress=${acc}&toAddress=${order.depositAddress}`);
+    const q=await r.json();
+    if(!r.ok||!q.tx) throw new Error('quote');
+    toast('Cotação: '+amt+' '+token+' ≈ '+q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:4})+' USDT via '+q.tool+'. Assine na carteira.');
+    if(q.approvalAddress && token!=='MATIC'){
+      const amountIn=BigInt(Math.round(amt*10**TOK_DEC[token]));
+      const data='0x095ea7b3'+q.approvalAddress.slice(2).padStart(64,'0')+amountIn.toString(16).padStart(64,'0');
+      const ah=await ethereum.request({method:'eth_sendTransaction',params:[{from:acc,to:TOK_ADDR[token],data}]});
+      toast('Aprovação enviada, confirmando…');
+      await waitReceipt(ah);
+    }
+    const hash=await ethereum.request({method:'eth_sendTransaction',params:[{from:acc,to:q.tx.to,data:q.tx.data,value:q.tx.value}]});
+    toast('Pagamento enviado. O USDT cai direto no endereço da sua operação.');
+    const sub=$('#os-sub');
+    if(sub) sub.innerHTML='Conversão '+token+'→USDT enviada · <a href="https://polygonscan.com/tx/'+hash+'" target="_blank" rel="noopener" style="color:var(--accent)">ver na Polygonscan</a>. Aguardando confirmação…';
+  }catch(e){
+    toast(e&&e.code===4001?'Assinatura cancelada — a operação continua esperando o depósito.':'Não consegui converter agora. Você ainda pode depositar USDT no endereço.');
+  }
+}
 
 /* ---------- misc ---------- */
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),3200); }

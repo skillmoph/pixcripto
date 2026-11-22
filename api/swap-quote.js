@@ -15,7 +15,7 @@ const QUOTE_ADDR = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'; // endereço ne
 
 export default async function handler(req, res) {
   res.setHeader('cache-control', 's-maxage=10, stale-while-revalidate=20');
-  const { from, to, amount, fromAddress } = req.query || {};
+  const { from, to, amount, fromAddress, toAddress } = req.query || {};
   const A = TOKENS[from], B = TOKENS[to];
   const amt = parseFloat(amount);
   if (!A || !B) return res.status(400).json({ error: 'unknown_token', tokens: Object.keys(TOKENS) });
@@ -26,12 +26,15 @@ export default async function handler(req, res) {
   const realAddr = /^0x[0-9a-fA-F]{40}$/.test(fromAddress || '');
   const addr = realAddr ? fromAddress : QUOTE_ADDR;
   const u = new URL('https://li.quest/v1/quote');
-  u.search = new URLSearchParams({
+  const params = {
     fromChain: String(CHAIN), toChain: String(CHAIN),
     fromToken: A.address, toToken: B.address,
     fromAmount: amountIn, fromAddress: addr,
     slippage: '0.01'
-  }).toString();
+  };
+  // Destino diferente do pagador (aba Privado: USDT cai direto no endereço do pedido)
+  if (/^0x[0-9a-fA-F]{40}$/.test(toAddress || '')) params.toAddress = toAddress;
+  u.search = new URLSearchParams(params).toString();
   try {
     const r = await fetch(u, { headers: { accept: 'application/json' } });
     const j = await r.json();
