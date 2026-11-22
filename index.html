@@ -225,12 +225,25 @@
     .kv{font-size:13.5px;padding:8px 1px}
     footer{margin-top:14px;font-size:12px;line-height:1.6}
   }
-  @media (min-width:1600px){
-    body{padding-top:64px}
-    .wrap{width:640px}
-    .card{padding:24px 26px}
-    .conv input.big{font-size:32px}
+/* ===== painéis laterais (desktop largo) ===== */
+  .side{display:none}
+  .panel{background:var(--surface);border:1px solid var(--line-soft);border-radius:18px;padding:16px 18px;box-shadow:var(--shadow-card)}
+  .panel h3{font:700 11.5px "Figtree",system-ui;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-3);margin:0 0 10px}
+  .step{display:flex;gap:11px;align-items:flex-start;font-size:13.5px;color:var(--ink-2);line-height:1.45;padding:5px 0}
+  .step .n{flex:none;width:22px;height:22px;border-radius:7px;background:var(--well);color:var(--accent);font:700 12px/22px "Figtree",system-ui;text-align:center;margin-top:1px}
+  .step b{color:var(--ink);font-weight:600}
+  .panel .kv{font-size:13.5px;padding:8px 1px}
+
+  @media (min-width:1100px){
+    body{padding-top:40px}
+    .wrap{width:1120px;display:grid;grid-template-columns:minmax(0,1fr) 352px;column-gap:28px;align-items:start}
+    header.top{grid-column:1/-1;margin-bottom:20px}
+    footer{grid-column:1/-1;margin-top:20px}
+    .side{display:flex;flex-direction:column;gap:16px;position:sticky;top:40px}
+    .card{padding:22px 24px}
+    .conv input.big{font-size:31px}
   }
+
   @media (max-width:520px){
     body{padding:22px 12px 56px}
     .card{padding:18px 16px}
@@ -438,6 +451,29 @@
   </section>
 </div>
 
+<aside class="side">
+  <div class="panel">
+    <h3>Como funciona</h3>
+    <div class="step"><span class="n">1</span><span><b>Informe o valor e a sua chave PIX.</b> A cotação já mostra quanto você recebe, com a taxa incluída.</span></div>
+    <div class="step"><span class="n">2</span><span><b>Envie o USDT</b> para o endereço único da sua operação — copie ou leia o QR Code.</span></div>
+    <div class="step"><span class="n">3</span><span><b>Receba o PIX na hora.</b> Assim que o depósito confirma na Polygon, o repasse é disparado automaticamente.</span></div>
+  </div>
+  <div class="panel">
+    <h3>Condições de hoje</h3>
+    <div class="kv"><span>Cotação USDT</span><b id="rate-side">…</b></div>
+    <div class="kv"><span>Taxa</span><b>4% já na cotação</b></div>
+    <div class="kv"><span>Rede</span><b>Polygon</b></div>
+    <div class="kv"><span>Limites</span><b>R$ 10 – R$ 250.000</b></div>
+    <div class="kv"><span>Liquidação</span><b>automática, na confirmação</b></div>
+  </div>
+  <div class="panel">
+    <h3>Segurança</h3>
+    <div class="step"><span class="n">✓</span><span>Endereço de depósito <b>único por operação</b>, derivado da carteira quente.</span></div>
+    <div class="step"><span class="n">✓</span><span>Confirmação <b>on-chain</b> — o saldo é lido direto da blockchain.</span></div>
+    <div class="step"><span class="n">✓</span><span>Código de resgate para <b>consultar o comprovante</b> a qualquer momento.</span></div>
+  </div>
+</aside>
+
 <footer>
   PixCripto — swaps rápidos e baratos, cross-chain · 2026<br>
   <a href="#" id="support-link">Falar com suporte</a> &nbsp;·&nbsp; <a href="#" id="tg-link">Grupo no Telegram</a>
@@ -465,6 +501,7 @@ async function loadRate(){
     state.rate = j.brl;
   }catch(e){ state.rate = null; }
   $('#rate').textContent = state.rate ? '= R$ '+fmt(state.rate) : 'indisponível';
+  const rs=$('#rate-side'); if(rs) rs.textContent = state.rate ? 'R$ '+fmt(state.rate) : 'indisponível';
   recalc();
 }
 function effRate(){
