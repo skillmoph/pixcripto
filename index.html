@@ -199,26 +199,37 @@
   .toast.show{opacity:1}
 
   @media (min-width:760px){
-    body{padding-top:76px;padding-bottom:96px}
-    .wrap{width:560px}
-    header.top{margin-bottom:26px}
-    .wordmark{font-size:24px}
-    .rate{font-size:12.5px;padding:8px 15px}
-    .card{padding:30px;border-radius:22px}
-    .tabs{margin-bottom:26px}
-    .tabs button{font-size:13px;padding:10px 4px}
-    .conv{padding:18px}
-    .conv input.big{font-size:40px}
-    .fld{margin-bottom:18px}
-    input.txt,select.sel{font-size:15px;padding:13px 15px}
-    .cta{padding:15px;font-size:15px}
-    .kv{font-size:13.5px;padding:9px 1px}
-    footer{font-size:12.5px}
+    body{padding-top:34px;padding-bottom:40px}
+    .wrap{width:600px}
+    header.top{margin-bottom:18px}
+    .wordmark{font-size:23px}
+    .rate{font-size:13px;padding:8px 15px}
+    .card{padding:20px 22px;border-radius:20px}
+    .tabs{margin-bottom:16px}
+    .tabs button{font-size:13px;padding:9px 4px}
+    /* conversor lado a lado: tudo cabe numa tela sem rolagem */
+    .convgrid{display:grid;grid-template-columns:1fr 46px 1fr;align-items:center;margin-bottom:4px}
+    .convgrid .divider{margin:0;flex-direction:column}
+    .convgrid .divider::before,.convgrid .divider::after{display:none}
+    .convgrid .flip{transform:rotate(90deg)}
+    .conv{padding:13px 16px;margin-bottom:0}
+    .conv input.big{font-size:30px}
+    .fld{margin-bottom:11px}
+    .netrow{margin-bottom:8px}
+    .limits{margin:-2px 1px 10px}
+    .paywith{margin-bottom:11px}
+    .receipt{margin-top:14px;padding-top:12px}
+    input.txt,select.sel{font-size:14.5px;padding:11px 14px}
+    .hint{font-size:13px}
+    .cta{padding:13px;font-size:15px}
+    .kv{font-size:13.5px;padding:8px 1px}
+    footer{margin-top:14px;font-size:12px;line-height:1.6}
   }
   @media (min-width:1600px){
-    body{padding-top:110px}
-    .wrap{width:600px}
-    .card{padding:34px}
+    body{padding-top:64px}
+    .wrap{width:640px}
+    .card{padding:24px 26px}
+    .conv input.big{font-size:32px}
   }
   @media (max-width:520px){
     body{padding:22px 12px 56px}
@@ -257,6 +268,7 @@
     </div>
     <div class="limits">Mínimo R$ 10 · máximo R$ 250.000 por transação</div>
 
+    <div class="convgrid">
     <div class="conv">
       <div class="row2"><label class="lab" style="margin:0">Você envia</label><span class="cur">USDT</span></div>
       <input class="big" id="send-usdt" type="text" inputmode="decimal" placeholder="0,00">
@@ -267,6 +279,7 @@
       <div class="row2"><label class="lab" style="margin:0">Você recebe</label><span class="cur">BRL</span></div>
       <input class="big" id="recv-brl" type="text" inputmode="decimal" placeholder="0,00">
       <div class="sub" id="fee-note">taxa de 4% já na cotação</div>
+    </div>
     </div>
 
     <div class="paywith" id="paywith-direct" style="margin-top:16px">
@@ -379,6 +392,7 @@
 
   <!-- ============ SWAP ============ -->
   <section class="pane" id="tab-swap">
+    <div class="convgrid">
     <div class="conv" style="margin-bottom:4px">
       <div class="row2"><label class="lab" style="margin:0">Você paga</label>
         <div class="selbox" style="width:110px"><select class="sel" id="swap-from" style="padding:6px 26px 6px 10px;font-size:12.5px"><option>USDC</option><option>USDT</option><option>ETH</option><option>DAI</option><option>WBTC</option></select></div>
@@ -392,6 +406,7 @@
         <div class="selbox" style="width:110px"><select class="sel" id="swap-to" style="padding:6px 26px 6px 10px;font-size:12.5px"><option value="">Escolher</option><option>USDT</option><option>USDC</option><option>ETH</option><option>MATIC</option><option>DAI</option></select></div>
       </div>
       <div class="sub" id="swap-quote" style="margin-top:10px;font-size:13px;color:var(--ink-2)"></div>
+    </div>
     </div>
     <button class="cta" id="swap-go" disabled>Converter e receber em PIX</button>
     <button class="btn2" id="swap-connect" style="width:100%;margin-top:8px">Conectar carteira (opcional)</button>
