@@ -43,7 +43,7 @@ export default async function handler(req, res) {
     if (status === 'CONFIRMED_ONCHAIN' && p.pixKey && p.brl) {
       // repasse PIX via Asaas (sandbox enquanto ASAAS_BASE_URL aponta para api-sandbox)
       const t = await ensurePixTransfer({ code: p.code, brl: p.brl, pixKey: p.pixKey });
-      payout = { provider: 'asaas', sandbox: asaasSandbox(), ...t };
+      if (!t.skipped) payout = { provider: 'asaas', sandbox: asaasSandbox(), ...t };
       if (t.status === 'DONE') status = 'PAID';
       else if (!t.error && !t.skipped) status = 'PROCESSING';
     }
