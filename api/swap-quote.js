@@ -1,39 +1,65 @@
-// GET /api/swap-quote?from=USDC&to=USDT&amount=1
-// Cotação real de swap na Ethereum mainnet via KyberSwap Aggregator (API pública, sem chave).
+// GET /api/swap-quote?from=USDC&to=USDT&amount=1[&fromAddress=0x...]
+// Cotação e rota REAL de swap na Polygon via LI.FI (API pública, sem chave).
+// Com fromAddress válido, devolve também a transação pronta para a carteira
+// do cliente assinar — o PixCripto não custeia gás nem liquidez.
+const CHAIN = 137; // Polygon
 const TOKENS = {
-  USDC: { address: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48', decimals: 6 },
-  USDT: { address: '0xdAC17F958D2ee523a2206206994597C13D831ec7', decimals: 6 },
-  ETH:  { address: '0xEeeeeEeeeEeEeeEeEeEeeEEEeeeeEeeeeeeeEEeE', decimals: 18 },
-  DAI:  { address: '0x6B175474E89094C44Da98b954EedeAC495271d0F', decimals: 18 },
-  WBTC: { address: '0x2260FAC5E5542a773Aa44fBCfeDf7C193bc2C599', decimals: 8 },
-  MATIC:{ address: '0x7D1AfA7B718fb893dB30A3aBc0Cfc608AaCfeBB0', decimals: 18 }
+  USDT: { address: '0xc2132D05D31c914a87C6611C10748AEb04B58e8F', decimals: 6 },
+  USDC: { address: '0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174', decimals: 6 }, // USDC.e
+  ETH:  { address: '0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619', decimals: 18 }, // WETH
+  DAI:  { address: '0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063', decimals: 18 },
+  WBTC: { address: '0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6', decimals: 8 },
+  MATIC:{ address: '0x0000000000000000000000000000000000000000', decimals: 18 } // nativo (POL)
 };
+const QUOTE_ADDR = '0xd8dA6BF26964aF9D7eEd9e03E53415D37aA96045'; // endereço neutro só para simular a cotação
 
 export default async function handler(req, res) {
   res.setHeader('cache-control', 's-maxage=10, stale-while-revalidate=20');
-  const { from, to, amount } = req.query || {};
+  const { from, to, amount, fromAddress } = req.query || {};
   const A = TOKENS[from], B = TOKENS[to];
   const amt = parseFloat(amount);
   if (!A || !B) return res.status(400).json({ error: 'unknown_token', tokens: Object.keys(TOKENS) });
+  if (from === to) return res.status(400).json({ error: 'same_token' });
   if (!(amt > 0)) return res.status(400).json({ error: 'amount_required' });
 
   const amountIn = BigInt(Math.round(amt * 10 ** A.decimals)).toString();
-  const url = `https://aggregator-api.kyberswap.com/ethereum/api/v1/routes?tokenIn=${A.address}&tokenOut=${B.address}&amountIn=${amountIn}`;
+  const realAddr = /^0x[0-9a-fA-F]{40}$/.test(fromAddress || '');
+  const addr = realAddr ? fromAddress : QUOTE_ADDR;
+  const u = new URL('https://li.quest/v1/quote');
+  u.search = new URLSearchParams({
+    fromChain: String(CHAIN), toChain: String(CHAIN),
+    fromToken: A.address, toToken: B.address,
+    fromAmount: amountIn, fromAddress: addr,
+    slippage: '0.01'
+  }).toString();
   try {
-    const r = await fetch(url, { headers: { 'accept': 'application/json' } });
+    const r = await fetch(u, { headers: { accept: 'application/json' } });
     const j = await r.json();
-    const sum = j?.data?.routeSummary;
-    if (!r.ok || !sum) return res.status(502).json({ error: 'quote_failed' });
-    const out = Number(sum.amountOut) / 10 ** B.decimals;
-    res.status(200).json({
+    if (!r.ok || !j.transactionRequest) {
+      return res.status(502).json({ error: 'quote_failed', detail: j.message || undefined });
+    }
+    const steps = j.includedSteps || [];
+    const step = steps.find(st => st.type === 'swap') || steps[steps.length - 1] || {};
+    const gasUsd = j.estimate && j.estimate.gasCosts && j.estimate.gasCosts[0]
+      ? parseFloat(j.estimate.gasCosts[0].amountUSD) : null;
+    return res.status(200).json({
       from, to, amountIn: amt,
-      amountOut: out,
-      amountInUsd: parseFloat(sum.amountInUsd) || null,
-      amountOutUsd: parseFloat(sum.amountOutUsd) || null,
-      gasUsd: parseFloat(sum.gasUsd) || null,
-      source: 'kyberswap'
+      amountOut: Number(j.estimate.toAmount) / 10 ** B.decimals,
+      amountOutUsd: parseFloat(j.estimate.toAmountUSD) || null,
+      gasUsd,
+      tool: (step.toolDetails && step.toolDetails.name) || step.tool || 'aggregator',
+      approvalAddress: j.estimate.approvalAddress || null,
+      source: 'li.fi',
+      chainId: CHAIN,
+      tx: realAddr ? {
+        to: j.transactionRequest.to,
+        data: j.transactionRequest.data,
+        value: j.transactionRequest.value || '0x0',
+        gas: j.transactionRequest.gasLimit || null,
+        chainId: CHAIN
+      } : null
     });
   } catch (e) {
-    res.status(502).json({ error: 'quote_unreachable' });
+    return res.status(502).json({ error: 'quote_unreachable' });
   }
 }

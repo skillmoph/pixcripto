@@ -421,8 +421,9 @@
       <div class="sub" id="swap-quote" style="margin-top:10px;font-size:13px;color:var(--ink-2)"></div>
     </div>
     </div>
-    <button class="cta" id="swap-go" disabled>Converter e receber em PIX</button>
-    <button class="btn2" id="swap-connect" style="width:100%;margin-top:8px">Conectar carteira (opcional)</button>
+    <button class="cta" id="swap-go" disabled>Executar swap</button>
+    <button class="btn2" id="swap-connect" style="width:100%;margin-top:8px">Conectar carteira para executar</button>
+    <div class="hint" style="margin-top:8px">O swap acontece na sua carteira, na rede Polygon. Gás e taxas da rota saem do valor da troca. Depois, o USDT pode virar PIX no PIX Direto.</div>
   </section>
 
   <!-- ============ ORDER VIEW ============ -->
@@ -726,48 +727,94 @@ async function connectWalletOptional(btn){
   if(!window.ethereum){ toast('Sem carteira neste navegador — sem problema: siga pelo endereço + QR Code.'); return; }
   try{
     const acc = await window.ethereum.request({method:'eth_requestAccounts'});
+    window._walletAccount = acc[0];
     btn.textContent = 'Carteira ' + acc[0].slice(0,6) + '…' + acc[0].slice(-4) + ' conectada';
     btn.disabled = true;
     toast('Carteira conectada. Você também pode seguir pelo endereço + QR Code.');
+    updateSwapGo();
   }catch(e){ toast('Conexão cancelada — pode seguir pelo endereço + QR Code mesmo.'); }
 }
 $('#wallet-connect').addEventListener('click',()=>connectWalletOptional($('#wallet-connect')));
 $('#swap-connect').addEventListener('click',()=>connectWalletOptional($('#swap-connect')));
 
-/* ---------- cotação real de swap (KyberSwap via /api/swap-quote) ---------- */
+/* ---------- swap REAL na Polygon (LI.FI via /api/swap-quote) ---------- */
+const TOK_ADDR={USDT:'0xc2132D05D31c914a87C6611C10748AEb04B58e8F',USDC:'0x2791Bca1f2de4661ED88A30C99A7a9449Aa84174',ETH:'0x7ceB23fD6bC0adD59E62ac25578270cFf1b9f619',DAI:'0x8f3Cf7ad23Cd3CaDbD9735AFf958023239c6A063',WBTC:'0x1BFD67037B42Cf73acF2047067bd4F2C47D9BfD6',MATIC:'0x0000000000000000000000000000000000000000'};
+const TOK_DEC={USDT:6,USDC:6,ETH:18,DAI:18,WBTC:8,MATIC:18};
+const POLY_CHAIN='0x89'; // 137
 let quoteTimer=null;
 async function fetchQuote(from,to,amount){
   const r=await fetch(`/api/swap-quote?from=${from}&to=${to}&amount=${amount}`);
   if(!r.ok) throw new Error('quote');
   return r.json();
 }
+function updateSwapGo(){
+  $('#swap-go').disabled = !(window._lastQuote && window._walletAccount);
+}
 function scheduleSwapQuote(){
   clearTimeout(quoteTimer);
   quoteTimer=setTimeout(async ()=>{
     const from=$('#swap-from').value, to=$('#swap-to').value, amt=num($('#swap-amount').value);
     const out=$('#swap-quote');
-    if(!to){ out.textContent=''; $('#swap-go').disabled=true; return; }
+    window._lastQuote=null; updateSwapGo();
+    if(!to){ out.textContent=''; return; }
+    if(from===to){ out.textContent='Escolha dois tokens diferentes.'; return; }
     if(!amt){ out.textContent='Informe o valor.'; return; }
     out.textContent='Cotando…';
     try{
       const q=await fetchQuote(from,to,amt);
-      out.textContent=`≈ ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${to} · US$ ${q.amountOutUsd?.toFixed(2)} · gás ~US$ ${q.gasUsd?.toFixed(2)}`;
-      window._lastQuote=q; $('#swap-go').disabled=false;
-    }catch(e){ out.textContent='Cotação indisponível agora.'; $('#swap-go').disabled=true; }
+      out.textContent=`≈ ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${to} · via ${q.tool} · gás ~US$ ${(q.gasUsd??0).toFixed(2)} · taxas saem do valor da troca`;
+      window._lastQuote=q; updateSwapGo();
+    }catch(e){ out.textContent='Cotação indisponível agora.'; }
   },450);
+}
+async function waitReceipt(hash){
+  for(let i=0;i<40;i++){
+    const r=await ethereum.request({method:'eth_getTransactionReceipt',params:[hash]});
+    if(r&&r.status) return r;
+    await new Promise(res=>setTimeout(res,3000));
+  }
+  throw new Error('receipt_timeout');
+}
+async function executeSwap(){
+  const btn=$('#swap-go');
+  const from=$('#swap-from').value, to=$('#swap-to').value, amt=num($('#swap-amount').value);
+  const acc=window._walletAccount;
+  if(!window._lastQuote||!acc) return;
+  btn.disabled=true; btn.textContent='Preparando transação…';
+  try{
+    const cur=await ethereum.request({method:'eth_chainId'});
+    if(cur!==POLY_CHAIN){
+      try{ await ethereum.request({method:'wallet_switchEthereumChain',params:[{chainId:POLY_CHAIN}]}); }
+      catch(sw){
+        if(sw&&sw.code===4902){
+          await ethereum.request({method:'wallet_addEthereumChain',params:[{chainId:POLY_CHAIN,chainName:'Polygon Mainnet',nativeCurrency:{name:'POL',symbol:'POL',decimals:18},rpcUrls:['https://polygon-bor-rpc.publicnode.com'],blockExplorerUrls:['https://polygonscan.com']}]});
+        } else throw sw;
+      }
+    }
+    const r=await fetch(`/api/swap-quote?from=${from}&to=${to}&amount=${amt}&fromAddress=${acc}`);
+    const q2=await r.json();
+    if(!r.ok||!q2.tx) throw new Error('quote');
+    if(q2.approvalAddress && from!=='MATIC'){
+      const amountIn=BigInt(Math.round(amt*10**TOK_DEC[from]));
+      const data='0x095ea7b3'+q2.approvalAddress.slice(2).padStart(64,'0')+amountIn.toString(16).padStart(64,'0');
+      btn.textContent='Aprove na carteira (1/2)…';
+      const ah=await ethereum.request({method:'eth_sendTransaction',params:[{from:acc,to:TOK_ADDR[from],data}]});
+      btn.textContent='Confirmando aprovação…';
+      await waitReceipt(ah);
+    }
+    btn.textContent='Assine o swap na carteira…';
+    const hash=await ethereum.request({method:'eth_sendTransaction',params:[{from:acc,to:q2.tx.to,data:q2.tx.data,value:q2.tx.value}]});
+    btn.textContent='Swap enviado';
+    $('#swap-quote').innerHTML=`Swap executado · <a href="https://polygonscan.com/tx/${hash}" target="_blank" rel="noopener" style="color:var(--accent)">ver na Polygonscan</a>`;
+    toast('Swap executado. Os tokens chegam direto na sua carteira.');
+  }catch(e){
+    btn.textContent='Executar swap'; updateSwapGo();
+    toast(e&&e.code===4001?'Assinatura cancelada.':'Não consegui executar o swap agora. Tente de novo.');
+  }
 }
 ['#swap-amount','#swap-from','#swap-to'].forEach(s=>$(s).addEventListener('input',scheduleSwapQuote));
 $('#swap-to').addEventListener('change',scheduleSwapQuote);
-$('#swap-go').addEventListener('click',()=>{
-  if(!window._lastQuote){ toast('Cotação indisponível agora.'); return; }
-  const v=window._lastQuote.amountOut;
-  $('#send-usdt').value=v.toFixed(2).replace('.',',');
-  $('#send-usdt').dispatchEvent(new Event('input',{bubbles:true}));
-  $$('.pane').forEach(p=>p.classList.remove('on'));
-  $('#tab-direct').classList.add('on');
-  $$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab==='direct'));
-  toast('Valor convertido preenchido no PIX Direto. Informe sua chave PIX para continuar.');
-});
+$('#swap-go').addEventListener('click',executeSwap);
 $('#priv-calc').addEventListener('click',async ()=>{
   const est=$('#priv-est');
   const token=$('#priv-token').value, brl=num($('#priv-brl').value);
