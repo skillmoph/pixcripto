@@ -284,7 +284,6 @@
 
   <!-- ============ PIX WEB3 ============ -->
   <section class="pane" id="tab-web3">
-    <button class="wallet" id="wallet-connect">Conectar carteira</button>
     <div class="netrow" id="net-web3">
       <button class="net sel" data-net="polygon">Polygon · USDT</button>
       <button class="net" data-net="solana">Solana · USDT</button>
@@ -316,8 +315,8 @@
     </div>
 
     <div class="err" id="err-web3"></div>
-    <div class="hint" style="margin-bottom:14px">O USDT sai da sua carteira e o PIX é disparado automaticamente. Se algo falhar, o valor volta para a carteira conectada.</div>
-    <button class="cta" id="go-web3">Enviar USDT e disparar PIX</button>
+    <div class="hint" style="margin-bottom:14px">Você envia USDT para o endereço de depósito e o PIX é disparado automaticamente. Sem carteira, sem extensão: basta copiar o endereço ou ler o QR Code.</div>
+    <button class="cta" id="go-web3">Continuar</button>
   </section>
 
   <!-- ============ PRIVATE PIX ============ -->
@@ -329,10 +328,9 @@
       <label class="lab">Você paga em</label>
       <div class="inrow">
         <input class="txt" id="priv-amount" value="1" inputmode="decimal" style="font-size:17px;font-weight:600">
-        <div class="selbox"><select class="sel" id="priv-token"><option>USDC</option><option>USDT</option><option>ETH</option><option>DAI</option></select></div>
+        <div class="selbox"><select class="sel" id="priv-token"><option>USDT</option></select></div>
       </div>
     </div>
-    <button class="wallet" id="priv-connect">Conectar carteira</button>
 
     <div class="fld">
       <label class="lab">Valor em BRL <span style="float:right;font-weight:500;text-transform:none;color:var(--ink-4)">mín 10 USDT · máx R$ 10.000</span></label>
@@ -368,8 +366,7 @@
       </div>
       <div class="sub" id="swap-quote" style="margin-top:10px;font-size:13px;color:var(--ink-2)"></div>
     </div>
-    <button class="wallet" id="swap-connect">Conectar carteira</button>
-    <button class="cta" id="swap-go" disabled>Revisar swap</button>
+    <button class="cta" id="swap-go" disabled>Converter e receber em PIX</button>
   </section>
 
   <!-- ============ ORDER VIEW ============ -->
@@ -536,17 +533,35 @@ $('#go-direct').addEventListener('click', async ()=>{
     code: codeGen()
   };
   $('#go-direct').disabled=true; $('#go-direct').textContent='Criando operação…';
-  try{
-    const order = await createOrder(payload);
-    currentOrder = {...payload, ...order};
-    if(!currentOrder.depositAddress) currentOrder.depositAddress=fakeAddr();
-    const store=JSON.parse(localStorage.getItem('pixcripto_orders')||'{}');
-    store[currentOrder.code]={...currentOrder, ts:Date.now(), status:'WAITING_DEPOSIT'};
-    localStorage.setItem('pixcripto_orders',JSON.stringify(store));
-    showOrder(currentOrder);
-  }catch(e){ toast(e.message); }
+  try{ await placeOrder(payload); }catch(e){ toast(e.message); }
   $('#go-direct').disabled=false; $('#go-direct').textContent='Continuar';
 });
+async function placeOrder(payload){
+  const order = await createOrder(payload);
+  currentOrder = {...payload, ...order};
+  if(!currentOrder.depositAddress) currentOrder.depositAddress=fakeAddr();
+  const store=JSON.parse(localStorage.getItem('pixcripto_orders')||'{}');
+  store[currentOrder.code]={...currentOrder, ts:Date.now(), status:'WAITING_DEPOSIT'};
+  localStorage.setItem('pixcripto_orders',JSON.stringify(store));
+  showOrder(currentOrder);
+}
+async function placeOrderFromFields(btn, brl, pixKey, coupon){
+  const err = btn.closest('.pane').querySelector('.err');
+  const r = effRate();
+  const fail = m => { if(err){ err.textContent=m; err.classList.add('show'); } else toast(m); };
+  if(err) err.classList.remove('show');
+  if(!r) return fail('Cotação indisponível no momento. Tente de novo em instantes.');
+  if(!brl || brl < 10) return fail('O mínimo é R$ 10 por transação.');
+  if(brl > 250000) return fail('O máximo é R$ 250.000 por transação.');
+  if(!pixKeyOk(pixKey)) return fail('Informe uma chave PIX válida.');
+  const usdt = Math.round((brl / r) * 100) / 100;
+  btn.disabled = true; const label = btn.textContent; btn.textContent = 'Criando operação…';
+  try{
+    await placeOrder({ mode:'pix', net: state.net, usdt, brl, rate: r,
+      feePct: state.couponPct ?? state.feePct, pixKey, coupon: coupon || null, code: codeGen() });
+  }catch(e){ toast(e.message); }
+  btn.disabled = false; btn.textContent = label;
+}
 
 function showOrder(o){
   $$('.pane').forEach(p=>p.classList.remove('on'));
@@ -610,17 +625,6 @@ $('#receipt-check').addEventListener('click', async ()=>{
   out.textContent = o ? `Registrada neste navegador — ${BRL.format(o.brl)} para ${o.pixKey||'boleto'}` : 'Nenhuma operação encontrada com esse código.';
 });
 
-/* ---------- carteira (web3 / privado / swap) ---------- */
-async function connectWallet(btn){
-  if(!window.ethereum){ toast('Nenhuma carteira encontrada. Instale a MetaMask ou use o PIX Direto.'); return; }
-  try{
-    const acc = await window.ethereum.request({method:'eth_requestAccounts'});
-    btn.classList.add('ok'); btn.textContent='Carteira '+acc[0].slice(0,6)+'…'+acc[0].slice(-4);
-  }catch(e){ toast('Conexão recusada.'); }
-}
-$('#wallet-connect').addEventListener('click',()=>connectWallet($('#wallet-connect')));
-$('#priv-connect').addEventListener('click',()=>connectWallet($('#priv-connect')));
-$('#swap-connect').addEventListener('click',()=>connectWallet($('#swap-connect')));
 
 /* ---------- web3 tab ---------- */
 $('#web3-brl').addEventListener('input',()=>{
@@ -628,9 +632,10 @@ $('#web3-brl').addEventListener('input',()=>{
   $('#web3-usdt-est').textContent = r&&b ? '≈ '+fmt(b/r)+' USDT da sua carteira' : '≈ 0,00 USDT da sua carteira';
 });
 $('#go-web3').addEventListener('click',()=>{
-  const w=$('#wallet-connect');
-  if(!w.classList.contains('ok')){ toast('Conecte a carteira primeiro — ou use o PIX Direto, que não precisa de carteira.'); return; }
-  toast('O envio direto pela carteira ativa com a integração de pagamentos. Use o PIX Direto por enquanto.');
+  placeOrderFromFields($('#go-web3'), num($('#web3-brl').value), $('#web3-pixkey').value.trim(), $('#coupon-web3').value.trim().toUpperCase());
+});
+$('#go-private').addEventListener('click',()=>{
+  placeOrderFromFields($('#go-private'), num($('#priv-brl').value), $('#priv-pixkey').value.trim(), null);
 });
 
 /* ---------- cotação real de swap (KyberSwap via /api/swap-quote) ---------- */
@@ -651,16 +656,21 @@ function scheduleSwapQuote(){
     try{
       const q=await fetchQuote(from,to,amt);
       out.textContent=`≈ ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${to} · US$ ${q.amountOutUsd?.toFixed(2)} · gás ~US$ ${q.gasUsd?.toFixed(2)}`;
-      $('#swap-go').disabled=false;
+      window._lastQuote=q; $('#swap-go').disabled=false;
     }catch(e){ out.textContent='Cotação indisponível agora.'; $('#swap-go').disabled=true; }
   },450);
 }
 ['#swap-amount','#swap-from','#swap-to'].forEach(s=>$(s).addEventListener('input',scheduleSwapQuote));
 $('#swap-to').addEventListener('change',scheduleSwapQuote);
 $('#swap-go').addEventListener('click',()=>{
-  const w=$('#swap-connect');
-  if(!w.classList.contains('ok')){ toast('Conecte a carteira para assinar o swap.'); return; }
-  toast('A execução do swap ativa junto com a integração de pagamentos.');
+  if(!window._lastQuote){ toast('Cotação indisponível agora.'); return; }
+  const v=window._lastQuote.amountOut;
+  $('#send-usdt').value=v.toFixed(2).replace('.',',');
+  $('#send-usdt').dispatchEvent(new Event('input',{bubbles:true}));
+  $$('.pane').forEach(p=>p.classList.remove('on'));
+  $('#tab-direct').classList.add('on');
+  $$('.tabs button').forEach(x=>x.classList.toggle('on',x.dataset.tab==='direct'));
+  toast('Valor convertido preenchido no PIX Direto. Informe sua chave PIX para continuar.');
 });
 $('#priv-calc').addEventListener('click',async ()=>{
   const est=$('#priv-est');
@@ -675,7 +685,6 @@ $('#priv-calc').addEventListener('click',async ()=>{
     est.textContent=`≈ ${q.amountIn.toLocaleString('pt-BR',{maximumFractionDigits:6})} ${token} → ${q.amountOut.toLocaleString('pt-BR',{maximumFractionDigits:4})} USDT → ${BRL.format(brl)} (cotação real, via KyberSwap).`;
   }catch(e){ est.textContent=`≈ ${fmt(usdtNeeded)} USDT equivalentes (cotação do token indisponível).`; }
 });
-$('#go-private').addEventListener('click',()=>toast('Modo privado em beta: use o PIX Direto por enquanto.'));
 
 /* ---------- misc ---------- */
 function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),3200); }
