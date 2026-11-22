@@ -24,7 +24,11 @@
   *{box-sizing:border-box;margin:0;padding:0}
   html,body{min-height:100%}
   body{
-    background:var(--canvas); color:var(--ink);
+    background:
+      radial-gradient(1100px 560px at 50% -8%, rgba(47,191,159,.08), transparent 62%),
+      radial-gradient(800px 500px at 85% 110%, rgba(47,191,159,.04), transparent 60%),
+      var(--canvas);
+    color:var(--ink);
     font-family:"Figtree",system-ui,-apple-system,sans-serif;
     font-feature-settings:"tnum" 1,"ss01" 1;
     display:flex; flex-direction:column; align-items:center;
@@ -194,6 +198,28 @@
   }
   .toast.show{opacity:1}
 
+  @media (min-width:760px){
+    body{padding-top:76px;padding-bottom:96px}
+    .wrap{width:560px}
+    header.top{margin-bottom:26px}
+    .wordmark{font-size:24px}
+    .rate{font-size:12.5px;padding:8px 15px}
+    .card{padding:30px;border-radius:22px}
+    .tabs{margin-bottom:26px}
+    .tabs button{font-size:13px;padding:10px 4px}
+    .conv{padding:18px}
+    .conv input.big{font-size:40px}
+    .fld{margin-bottom:18px}
+    input.txt,select.sel{font-size:15px;padding:13px 15px}
+    .cta{padding:15px;font-size:15px}
+    .kv{font-size:13.5px;padding:9px 1px}
+    footer{font-size:12.5px}
+  }
+  @media (min-width:1600px){
+    body{padding-top:110px}
+    .wrap{width:600px}
+    .card{padding:34px}
+  }
   @media (max-width:520px){
     body{padding:22px 12px 56px}
     .card{padding:18px 16px}
