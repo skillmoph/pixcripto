@@ -52,19 +52,26 @@ export async function ensurePixTransfer({ code, brl, pixKey }) {
     const lr = await fetch(BASE() + '/transfers?limit=100', { headers });
     if (lr.ok) {
       const lj = await lr.json();
-      const found = (lj.data || []).find(t => (t.description || '').includes(code));
+      const found = (lj.data || []).find(t => t.externalReference === code || (t.description || '').includes(code));
       if (found) return { id: found.id, status: found.status, value: found.value, method: found.operationType, existed: true };
     }
-    // 1) tenta PIX (pode levar ~30s no sandbox antes de responder)
-    const p = await postTransfer(headers, {
-      value: Number(brl),
-      operationType: 'PIX',
-      pixAddressKey: String(pixKey),
-      pixAddressKeyType: pixKeyType(pixKey),
-      description: desc
-    });
-    if (p.ok) return { id: p.j.id, status: p.j.status, value: p.j.value, method: 'PIX', created: true };
-    const pixError = (p.j.errors && p.j.errors[0] && p.j.errors[0].description) || ('http_' + p.status);
+    // 1) tenta PIX (pode levar ~30s no sandbox antes de responder);
+    //    ASAAS_PIX_DISABLED=1 pula direto para o fallback (janela de duplicação mínima)
+    let pixError = null;
+    if (process.env.ASAAS_PIX_DISABLED !== '1') {
+      const p = await postTransfer(headers, {
+        value: Number(brl),
+        operationType: 'PIX',
+        pixAddressKey: String(pixKey),
+        pixAddressKeyType: pixKeyType(pixKey),
+        description: desc,
+        externalReference: code
+      });
+      if (p.ok) return { id: p.j.id, status: p.j.status, value: p.j.value, method: 'PIX', created: true };
+      pixError = (p.j.errors && p.j.errors[0] && p.j.errors[0].description) || ('http_' + p.status);
+    } else {
+      pixError = 'pix_disabled';
+    }
     // 2) fallback TED quando o PIX está indisponível
     const ted = tedFallbackAccount();
     if (ted) {
@@ -72,7 +79,8 @@ export async function ensurePixTransfer({ code, brl, pixKey }) {
         value: Number(brl),
         operationType: 'TED',
         bankAccount: ted,
-        description: desc + ' (fallback TED)'
+        description: desc + ' (fallback TED)',
+        externalReference: code
       });
       if (t.ok) return { id: t.j.id, status: t.j.status, value: t.j.value, method: 'TED_FALLBACK', pixError, created: true };
       const tedError = (t.j.errors && t.j.errors[0] && t.j.errors[0].description) || ('http_' + t.status);
