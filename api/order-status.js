@@ -5,6 +5,8 @@
 import { deriveAddress, deriveSolanaAddress, verifyToken } from './_wallet.js';
 import { ensurePixTransfer, asaasSandbox } from './_asaas.js';
 
+export const maxDuration = 60; // tentativa PIX no Asaas pode levar ~30s antes do fallback
+
 const USDT = '0xc2132D05D31c914a87C6611C10748AEb04B58e8F'; // USDT (PoS) na Polygon
 const RPCS = ['https://polygon-bor-rpc.publicnode.com', 'https://polygon.drpc.org'];
 const USDT_SPL = 'Es9vMFrzaCERmJfrF4H2FYD4KCoNkY11McCe8BenwNYB'; // USDT na Solana mainnet

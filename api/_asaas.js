@@ -15,6 +15,34 @@ function pixKeyType(key) {
   return 'EVP';
 }
 
+async function postTransfer(headers, body, timeoutMs) {
+  const ctrl = new AbortController();
+  const t = setTimeout(() => ctrl.abort(), timeoutMs || 45000);
+  try {
+    const r = await fetch(BASE() + '/transfers', { method: 'POST', headers, body: JSON.stringify(body), signal: ctrl.signal });
+    const j = await r.json().catch(() => ({}));
+    return { ok: r.ok, status: r.status, j };
+  } finally { clearTimeout(t); }
+}
+
+// Conta bancária de fallback para quando o PIX está indisponível (ex.: chave Pix
+// da conta ainda em ativação). Dados fictícios de sandbox via env; em produção,
+// apontar para a conta bancária real do dono da operação.
+function tedFallbackAccount() {
+  const cpf = process.env.ASAAS_TED_CPF;
+  if (!cpf || process.env.ASAAS_TED_FALLBACK === '0') return null;
+  return {
+    bank: { code: process.env.ASAAS_TED_BANK || '341' },
+    accountName: 'PixCripto fallback',
+    ownerName: process.env.ASAAS_TED_OWNER || '',
+    cpfCnpj: cpf,
+    agency: process.env.ASAAS_TED_AGENCY || '0001',
+    account: process.env.ASAAS_TED_ACCOUNT || '',
+    accountDigit: process.env.ASAAS_TED_ACCOUNT_DIGIT || '',
+    bankAccountType: 'CONTA_CORRENTE'
+  };
+}
+
 export async function ensurePixTransfer({ code, brl, pixKey }) {
   const key = process.env.ASAAS_API_KEY;
   if (!key) return { skipped: 'asaas_not_configured' };
@@ -25,22 +53,32 @@ export async function ensurePixTransfer({ code, brl, pixKey }) {
     if (lr.ok) {
       const lj = await lr.json();
       const found = (lj.data || []).find(t => (t.description || '').includes(code));
-      if (found) return { id: found.id, status: found.status, value: found.value, existed: true };
+      if (found) return { id: found.id, status: found.status, value: found.value, method: found.operationType, existed: true };
     }
-    const r = await fetch(BASE() + '/transfers', {
-      method: 'POST', headers,
-      body: JSON.stringify({
-        value: Number(brl),
-        pixAddressKey: String(pixKey),
-        pixAddressKeyType: pixKeyType(pixKey),
-        description: desc
-      })
+    // 1) tenta PIX (pode levar ~30s no sandbox antes de responder)
+    const p = await postTransfer(headers, {
+      value: Number(brl),
+      operationType: 'PIX',
+      pixAddressKey: String(pixKey),
+      pixAddressKeyType: pixKeyType(pixKey),
+      description: desc
     });
-    const j = await r.json().catch(() => ({}));
-    if (!r.ok) {
-      return { error: 'asaas_transfer_failed', detail: (j.errors && j.errors[0] && j.errors[0].description) || ('http_' + r.status) };
+    if (p.ok) return { id: p.j.id, status: p.j.status, value: p.j.value, method: 'PIX', created: true };
+    const pixError = (p.j.errors && p.j.errors[0] && p.j.errors[0].description) || ('http_' + p.status);
+    // 2) fallback TED quando o PIX está indisponível
+    const ted = tedFallbackAccount();
+    if (ted) {
+      const t = await postTransfer(headers, {
+        value: Number(brl),
+        operationType: 'TED',
+        bankAccount: ted,
+        description: desc + ' (fallback TED)'
+      });
+      if (t.ok) return { id: t.j.id, status: t.j.status, value: t.j.value, method: 'TED_FALLBACK', pixError, created: true };
+      const tedError = (t.j.errors && t.j.errors[0] && t.j.errors[0].description) || ('http_' + t.status);
+      return { error: 'asaas_transfer_failed', detail: pixError, tedError };
     }
-    return { id: j.id, status: j.status, value: j.value, created: true };
+    return { error: 'asaas_transfer_failed', detail: pixError };
   } catch (e) {
     return { error: 'asaas_unreachable' };
   }
