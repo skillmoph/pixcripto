@@ -3,7 +3,7 @@
 // Monitor: balanceOf(endereço derivado) no contrato oficial USDT (PoS) da Polygon
 // via RPC público gratuito, com fallback.
 import { deriveAddress, deriveSolanaAddress, verifyToken } from './_wallet.js';
-import { ensurePixTransfer, asaasSandbox } from './_asaas.js';
+import { ensurePixTransfer, ensureBillPayment, asaasSandbox } from './_asaas.js';
 
 export const maxDuration = 60; // tentativa PIX no Asaas pode levar ~30s antes do fallback
 
@@ -47,6 +47,20 @@ async function usdtSplBalance(owner) {
   throw new Error('rpc_unreachable');
 }
 
+
+// Repasse: chave PIX -> transferência (com fallback TED); linha digitável -> Pague Contas.
+async function runPayout(p, status) {
+  if (status !== 'CONFIRMED_ONCHAIN' || !p.brl) return { status, payout: null };
+  let t = null;
+  if (p.pixKey) t = await ensurePixTransfer({ code: p.code, brl: p.brl, pixKey: p.pixKey });
+  else if (p.boleto) t = await ensureBillPayment({ code: p.code, identificationField: p.boleto });
+  if (!t) return { status, payout: null };
+  const payout = t.skipped ? null : { provider: 'asaas', sandbox: asaasSandbox(), ...t };
+  if (t.status === 'DONE' || t.status === 'CONFIRMED') status = 'PAID';
+  else if (!t.error && !t.skipped) status = 'PROCESSING';
+  return { status, payout };
+}
+
 export default async function handler(req, res) {
   const { token, code } = req.query || {};
 
@@ -66,13 +80,8 @@ export default async function handler(req, res) {
       let status = balance <= 0 ? 'WAITING_DEPOSIT'
         : balance + 1e-9 < expected ? 'CONFIRMING'
         : 'CONFIRMED_ONCHAIN';
-      let payout = null;
-      if (status === 'CONFIRMED_ONCHAIN' && p.pixKey && p.brl) {
-        const t = await ensurePixTransfer({ code: p.code, brl: p.brl, pixKey: p.pixKey });
-        if (!t.skipped) payout = { provider: 'asaas', sandbox: asaasSandbox(), ...t };
-        if (t.status === 'DONE') status = 'PAID';
-        else if (!t.error && !t.skipped) status = 'PROCESSING';
-      }
+      const r2 = await runPayout(p, status);
+      status = r2.status; const payout = r2.payout;
       return res.status(200).json({
         status, provider: 'onchain-solana', address,
         balance, expected, code: p.code, payout
@@ -89,14 +98,8 @@ export default async function handler(req, res) {
     let status = balance <= 0 ? 'WAITING_DEPOSIT'
       : balance + 1e-9 < expected ? 'CONFIRMING'        // depósito parcial
       : 'CONFIRMED_ONCHAIN';                             // recebido on-chain
-    let payout = null;
-    if (status === 'CONFIRMED_ONCHAIN' && p.pixKey && p.brl) {
-      // repasse PIX via Asaas (sandbox enquanto ASAAS_BASE_URL aponta para api-sandbox)
-      const t = await ensurePixTransfer({ code: p.code, brl: p.brl, pixKey: p.pixKey });
-      if (!t.skipped) payout = { provider: 'asaas', sandbox: asaasSandbox(), ...t };
-      if (t.status === 'DONE') status = 'PAID';
-      else if (!t.error && !t.skipped) status = 'PROCESSING';
-    }
+    const r2 = await runPayout(p, status);
+    status = r2.status; const payout = r2.payout;
     return res.status(200).json({
       status, provider: 'onchain-polygon', address,
       balance, expected, code: p.code, payout

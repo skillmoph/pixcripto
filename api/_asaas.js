@@ -43,6 +43,36 @@ function tedFallbackAccount() {
   };
 }
 
+// Pagamento de boleto (Pague Contas) — idempotente por externalReference=código.
+export async function ensureBillPayment({ code, identificationField }) {
+  const key = process.env.ASAAS_API_KEY;
+  if (!key) return { skipped: 'asaas_not_configured' };
+  const headers = { 'content-type': 'application/json', access_token: key };
+  try {
+    const lr = await fetch(BASE() + '/bill?limit=100', { headers });
+    if (lr.ok) {
+      const lj = await lr.json();
+      const found = (lj.data || []).find(b => b.externalReference === code);
+      if (found) return { id: found.id, status: found.status, value: found.value, receipt: found.transactionReceiptUrl, existed: true };
+    }
+    const r = await fetch(BASE() + '/bill', {
+      method: 'POST', headers,
+      body: JSON.stringify({
+        identificationField: String(identificationField).replace(/\D/g, ''),
+        description: 'PixCripto ' + code,
+        externalReference: code
+      })
+    });
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) {
+      return { error: 'asaas_bill_failed', detail: (j.errors && j.errors[0] && j.errors[0].description) || ('http_' + r.status) };
+    }
+    return { id: j.id, status: j.status, value: j.value, receipt: j.transactionReceiptUrl, created: true };
+  } catch (e) {
+    return { error: 'asaas_unreachable' };
+  }
+}
+
 export async function ensurePixTransfer({ code, brl, pixKey }) {
   const key = process.env.ASAAS_API_KEY;
   if (!key) return { skipped: 'asaas_not_configured' };
