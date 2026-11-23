@@ -4,6 +4,7 @@
 // via RPC público gratuito, com fallback.
 import { deriveAddress, deriveSolanaAddress, verifyToken } from './_wallet.js';
 import { ensurePixTransfer, ensureBillPayment, asaasSandbox } from './_asaas.js';
+import { ensureMpPixPayout } from './_mercadopago.js';
 
 export const maxDuration = 60; // tentativa PIX no Asaas pode levar ~30s antes do fallback
 
@@ -52,11 +53,23 @@ async function usdtSplBalance(owner) {
 async function runPayout(p, status) {
   if (status !== 'CONFIRMED_ONCHAIN' || !p.brl) return { status, payout: null };
   let t = null;
-  if (p.pixKey) t = await ensurePixTransfer({ code: p.code, brl: p.brl, pixKey: p.pixKey });
-  else if (p.boleto) t = await ensureBillPayment({ code: p.code, identificationField: p.boleto });
+  if (p.pixKey) {
+    if (process.env.MP_PAYOUT_ENABLED === '1') {
+      t = await ensureMpPixPayout({ code: p.code, brl: p.brl, pixKey: p.pixKey });
+      if (t && !t.error && !t.skipped) t = { provider: 'mercadopago', ...t };
+      else t = null; // cai para o Asaas
+    }
+    if (!t) {
+      t = await ensurePixTransfer({ code: p.code, brl: p.brl, pixKey: p.pixKey });
+      if (!t.skipped) t = { provider: 'asaas', sandbox: asaasSandbox(), ...t };
+    }
+  } else if (p.boleto) {
+    t = await ensureBillPayment({ code: p.code, identificationField: p.boleto });
+    if (!t.skipped) t = { provider: 'asaas', sandbox: asaasSandbox(), ...t };
+  }
   if (!t) return { status, payout: null };
-  const payout = t.skipped ? null : { provider: 'asaas', sandbox: asaasSandbox(), ...t };
-  if (t.status === 'DONE' || t.status === 'CONFIRMED') status = 'PAID';
+  const payout = t.skipped ? null : t;
+  if (t.status === 'DONE' || t.status === 'CONFIRMED' || t.status === 'processed') status = 'PAID';
   else if (!t.error && !t.skipped) status = 'PROCESSING';
   return { status, payout };
 }
